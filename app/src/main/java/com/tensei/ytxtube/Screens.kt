@@ -24,7 +24,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
@@ -244,7 +245,8 @@ fun HomeScreen(
                 filterScrollKey = activeFilter,
                 header = {
                     if (!signedIn) {
-                        item(key = "anon_banner") {
+                        item(key = "anon_banner", span = { GridItemSpan(maxLineSpan) }) {
+                            
                             AnonHomeBanner(onSignIn = onSignIn, onSearch = onSearch)
                         }
                     }
