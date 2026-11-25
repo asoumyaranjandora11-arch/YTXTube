@@ -915,12 +915,7 @@ fun VideoContent(
     }
 }
 
-
-
-
-
-
-
+}
 @Composable
 fun AudioOnlyStage(
     state: PlayerState,
@@ -1028,17 +1023,6 @@ fun Modifier.aspectFit(aspect: Float, cover: Boolean = false) = layout { measura
 
 
 
-
-@Composable
-fun FullscreenPlayer(state: PlayerState, onExit: () -> Unit) {
-    VideoContent(
-        state = state,
-        fullscreen = true,
-        onCollapse = onExit,
-        onToggleFullscreen = onExit,
-        modifier = Modifier.fillMaxSize(),
-    )
-}
 
 @Composable
 private fun HoldSpeedPill(modifier: Modifier = Modifier) {
@@ -1834,5 +1818,4 @@ fun FullscreenPlayer(
             portraitEdgeScrub = false,
         )
     }
-}
 }
