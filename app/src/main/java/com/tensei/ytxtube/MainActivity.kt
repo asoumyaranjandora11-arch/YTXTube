@@ -1175,3 +1175,26 @@ internal fun parseYouTubeLink(text: String): YouTubeLinkTarget? {
     }
     return null
 }
+@Composable
+fun FullscreenPlayer(
+    state: PlayerState,
+    onExit: () -> Unit,
+) {
+    androidx.activity.compose.BackHandler(onBack = onExit)
+    SystemBarsHidden(true)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        VideoContent(
+            state = state,
+            fullscreen = true,
+            onCollapse = onExit,
+            onToggleFullscreen = onExit,
+            modifier = Modifier.fillMaxSize(),
+            interactive = true,
+            portraitEdgeScrub = false,
+        )
+    }
+}
