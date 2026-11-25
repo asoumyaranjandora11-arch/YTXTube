@@ -1,4 +1,8 @@
-package com.tensei.ytxtube
+package com.tensei.ytxtube 
+import androidx.compose.material.icons.rounded.ThumbUp
+import androidx.compose.material.icons.automirrored.rounded.Comment
+import androidx.compose.material.icons.rounded.Share
+
 
 import android.app.Activity
 import android.content.Context
@@ -666,53 +670,154 @@ fun VideoContent(
                         Modifier.height(EdgeScrubTimeRowHeight),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(formatDuration(state.scrubPreviewMs ?: state.positionMs), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        
+        if (!scrubbing && captionText != null) {
+            val captionLift by animateDpAsState(
+                targetValue = if (controlsVisible) EdgeScrubTimeRowBottomPad + EdgeScrubTimeRowHeight + 10.dp else 20.dp,
+                animationSpec = if (reduced) tween(0) else tween(200, easing = Motion.Emphasized),
+                label = "captionLift",
+            )
+            CaptionOverlay(
+                text = captionText,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = captionLift),
+            )
+        }
+                    Row(
+                        Modifier.height(EdgeScrubTimeRowHeight),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            formatDuration(state.scrubPreviewMs ?: state.positionMs),
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                         Text(
                             " / " + formatDuration(state.durationMs),
-                            color = Color.White.copy(alpha = 0.72f), fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                            color = Color.White.copy(alpha = 0.72f),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
                             modifier = Modifier.weight(1f),
                         )
                         state.askSegment?.let { segment ->
                             SkipSegmentPill(segment, enabled = true) { touched(); state.skipSegment(segment) }
                             Spacer(Modifier.width(6.dp))
                         }
-                        if (PlayerControlSettings.showQuickControls) {
+                        if (!fullscreen) {
+                            GlassButton(
+                                Icons.Rounded.Fullscreen,
+                                "Fullscreen",
+                                enabled,
+                                size = 34.dp,
+                                iconSize = 22.dp,
+                                tinted = false,
+                                backdrop = videoBackdrop,
+                            ) { onToggleFullscreen() }
+                        }
+                    }
+                }
+
+                // नीचे का Liquid Glass Control Dock (असली YouTube फुलस्क्रीन जैसा)
+                if (fullscreen) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp)
+                            .liquidGlass(
+                                backdrop = videoBackdrop,
+                                spec = glassSpec(
+                                    shape = CircleShape,
+                                    tint = Color(0xFF141414).copy(alpha = 0.25f),
+                                    blur = 28.dp,
+                                    refractionHeight = 18.dp,
+                                    refractionAmount = 28.dp
+                                )
+                            )
+                            .padding(horizontal = 14.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // बाएं तरफ: Like, Comments और Share बटन
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            GlassButton(
+                                Icons.Rounded.ThumbUp,
+                                "Like",
+                                enabled,
+                                size = 38.dp,
+                                iconSize = 20.dp,
+                                tinted = state.liked == true,
+                                backdrop = videoBackdrop
+                            ) { touched(); state.toggleLike() }
+
+                            GlassButton(
+                                Icons.AutoMirrored.Rounded.Comment,
+                                "Comments",
+                                enabled,
+                                size = 38.dp,
+                                iconSize = 20.dp,
+                                tinted = false,
+                                backdrop = videoBackdrop
+                            ) { touched(); state.sheet = PlayerSheet.Comments }
+
+                            GlassButton(
+                                Icons.Rounded.Share,
+                                "Share",
+                                enabled,
+                                size = 38.dp,
+                                iconSize = 20.dp,
+                                tinted = false,
+                                backdrop = videoBackdrop
+                            ) { touched(); state.share() }
+                        }
+
+                        // दाएं तरफ: Speed, Quality और Exit Fullscreen बटन
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             GlassButton(
                                 Icons.Rounded.Speed,
                                 "Playback speed",
                                 enabled,
-                                size = 34.dp,
+                                size = 38.dp,
                                 iconSize = 20.dp,
                                 tinted = false,
-                                backdrop = videoBackdrop,
+                                backdrop = videoBackdrop
                             ) { touched(); state.sheet = PlayerSheet.Speed }
-                            Spacer(Modifier.width(4.dp))
+
                             GlassButton(
                                 Icons.Rounded.HighQuality,
                                 "Quality",
                                 enabled,
-                                size = 34.dp,
+                                size = 38.dp,
                                 iconSize = 20.dp,
                                 tinted = false,
-                                backdrop = videoBackdrop,
+                                backdrop = videoBackdrop
                             ) { touched(); state.sheet = PlayerSheet.Quality }
-                            Spacer(Modifier.width(4.dp))
+
+                            GlassButton(
+                                Icons.Rounded.FullscreenExit,
+                                "Exit fullscreen",
+                                enabled,
+                                size = 38.dp,
+                                iconSize = 22.dp,
+                                tinted = false,
+                                backdrop = videoBackdrop
+                            ) { touched(); onToggleFullscreen() }
                         }
-                        GlassButton(
-                            if (fullscreen) Icons.Rounded.FullscreenExit else Icons.Rounded.Fullscreen,
-                            if (fullscreen) "Exit fullscreen" else "Fullscreen",
-                            enabled,
-                            size = 34.dp,
-                            iconSize = 22.dp,
-                            tinted = false,
-                            backdrop = videoBackdrop,
-                        ) { onToggleFullscreen() }
                     }
                 }
             }
-        }
-
-        val captionText = state.captionText
+            }
+        
+            val captionText = state.captionText
         if (!scrubbing && captionText != null) {
             val captionLift by animateDpAsState(
                 targetValue = if (controlsVisible) EdgeScrubTimeRowBottomPad + EdgeScrubTimeRowHeight + 10.dp else 20.dp,
