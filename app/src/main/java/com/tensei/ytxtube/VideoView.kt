@@ -701,6 +701,7 @@ fun VideoContent(
 
                 // नीचे का Liquid Glass Control Dock (असली YouTube फुलस्क्रीन जैसा)
                 if (fullscreen) {
+                    with(this@Box) {
                     Row(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
@@ -804,7 +805,7 @@ fun VideoContent(
                 }
             }
             }
-        
+            }
             val captionText = state.captionText
         if (!scrubbing && captionText != null) {
             val captionLift by animateDpAsState(
