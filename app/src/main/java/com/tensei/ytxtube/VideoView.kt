@@ -2,8 +2,6 @@ package com.tensei.ytxtube
 import androidx.compose.material.icons.rounded.ThumbUp
 import androidx.compose.material.icons.automirrored.rounded.Comment
 import androidx.compose.material.icons.rounded.Share
-
-
 import android.app.Activity
 import android.content.Context
 import android.media.AudioManager
@@ -1799,3 +1797,19 @@ private fun GestureHUD(
         }
     }
 }
+private val SeekStepMs = 10_000L
+private val SeekBurstWindowMs = 650L
+private val EdgeScrubTouchPadAbove = 14.dp
+private val EdgeScrubTouchPadBelow = 14.dp
+private val EdgeScrubTouchHeight = 28.dp
+private val EdgeScrubTimeRowBottomPad = 10.dp
+private val EdgeScrubTimeRowHeight = 36.dp
+private val FullscreenControlsVerticalPad = 6.dp
+private val FullscreenControlsLift = 56.dp
+private val FullscreenScrubBottomPad = 42.dp
+private val FullscreenScrubTouchHeight = 34.dp
+private val FullscreenScrubTrackHeight = 4.dp
+private val FullscreenScrubKnob = 8.dp
+private val FullscreenScrubKnobDragging = 11.dp
+private val FullscreenTimeRowBottomFromEdge = 62.dp
+    
