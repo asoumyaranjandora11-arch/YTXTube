@@ -1,4 +1,4 @@
-jpackage com.tensei.ytxtube
+package com.tensei.ytxtube
 
 import android.Manifest
 import android.app.Activity
