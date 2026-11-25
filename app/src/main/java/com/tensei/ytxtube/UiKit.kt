@@ -412,6 +412,95 @@ fun VideoCard(video: VideoItem, onClick: () -> Unit, modifier: Modifier = Modifi
         }
     }
 }
+@Composable
+fun CompactVideoCard(video: VideoItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val c = MaterialTheme.colorScheme
+    val menu = LocalVideoMenu.current
+    val openChannel = LocalChannelOpener.current
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .prefetchOnPress(video.id)
+            .pressable(pressedScale = 0.98f, onLongClick = { menu(video) }, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        // बाएं तरफ छोटा थंबनेल (पहली फोटो जैसा)
+        Box(
+            modifier = Modifier
+                .width(260.dp)
+                .aspectRatio(16f / 9f)
+        ) {
+            Thumbnail(
+                video.thumbnail,
+                Modifier.fillMaxSize(),
+                radius = 12,
+                videoId = video.id,
+            )
+            DurationPill(
+                video.durationSec,
+                Modifier.align(Alignment.BottomEnd).padding(6.dp),
+                isLive = video.isLive
+            )
+            ResumeBar(video.id, Modifier.align(Alignment.BottomStart))
+        }
+
+        Spacer(Modifier.width(14.dp))
+
+        // दाएं तरफ टाइटल, व्यूज़ और चैनल का नाम
+        Column(Modifier.weight(1f)) {
+            Text(
+                video.title,
+                fontWeight = FontWeight.Medium,
+                fontSize = 15.5.sp,
+                lineHeight = 21.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                metaLine(null, video.views, video.uploaded, video.isLive),
+                color = c.onSurfaceVariant,
+                fontSize = 12.5.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.pressable(enabled = video.channelUrl != null) {
+                    video.channelUrl?.let(openChannel)
+                }
+            ) {
+                ChannelAvatar(video.feedAvatar(), video.channel, size = 24)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    video.channel,
+                    color = c.onSurfaceVariant,
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
+        // दाएं कोने में तीन डॉट मेनू
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .pressable(onClick = { menu(video) }),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Rounded.MoreVert,
+                contentDescription = "Options",
+                tint = c.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
 
 
 @Composable
