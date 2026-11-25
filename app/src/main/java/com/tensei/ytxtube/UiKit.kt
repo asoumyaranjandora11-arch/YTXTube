@@ -460,7 +460,7 @@ fun CompactVideoCard(video: VideoItem, onClick: () -> Unit, modifier: Modifier =
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                metaLine(null, video.views, video.uploaded, video.isLive),
+                metaLine(video.channel, video.views, video.uploaded, video.isLive),
                 color = c.onSurfaceVariant,
                 fontSize = 12.5.sp,
                 maxLines = 1,

@@ -4,6 +4,7 @@ import androidx.compose.material.icons.automirrored.rounded.Comment
 import androidx.compose.material.icons.rounded.Share
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.media.AudioManager
 import android.view.HapticFeedbackConstants
 import androidx.activity.compose.BackHandler
@@ -668,25 +669,6 @@ fun VideoContent(
                         Modifier.height(EdgeScrubTimeRowHeight),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        
-        if (!scrubbing && captionText != null) {
-            val captionLift by animateDpAsState(
-                targetValue = if (controlsVisible) EdgeScrubTimeRowBottomPad + EdgeScrubTimeRowHeight + 10.dp else 20.dp,
-                animationSpec = if (reduced) tween(0) else tween(200, easing = Motion.Emphasized),
-                label = "captionLift",
-            )
-            CaptionOverlay(
-                text = captionText,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = captionLift),
-            )
-        }
-                    Row(
-                        Modifier.height(EdgeScrubTimeRowHeight),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
                         Text(
                             formatDuration(state.scrubPreviewMs ?: state.positionMs),
                             color = Color.White,
@@ -716,7 +698,6 @@ fun VideoContent(
                             ) { onToggleFullscreen() }
                         }
                     }
-                }
 
                 // नीचे का Liquid Glass Control Dock (असली YouTube फुलस्क्रीन जैसा)
                 if (fullscreen) {
@@ -750,7 +731,7 @@ fun VideoContent(
                                 enabled,
                                 size = 38.dp,
                                 iconSize = 20.dp,
-                                tinted = state.liked == true,
+                                tinted = state.currentLike == LikeStatus.Like,
                                 backdrop = videoBackdrop
                             ) { touched(); state.toggleLike() }
 
@@ -772,7 +753,16 @@ fun VideoContent(
                                 iconSize = 20.dp,
                                 tinted = false,
                                 backdrop = videoBackdrop
-                            ) { touched(); state.share() }
+                            ) {
+                                touched()
+                                state.current?.let { item ->
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT, YouTube.watchUrl(item.id))
+                                    }
+                                    context.startActivity(Intent.createChooser(intent, item.title))
+                                }
+                            }
                         }
 
                         // दाएं तरफ: Speed, Quality और Exit Fullscreen बटन
@@ -1781,21 +1771,6 @@ private fun GestureHUD(
         }
     }
 }
-private val SeekStepMs = 10_000L
-private val SeekBurstWindowMs = 650L
-private val EdgeScrubTouchPadAbove = 14.dp
-private val EdgeScrubTouchPadBelow = 14.dp
-private val EdgeScrubTouchHeight = 28.dp
-private val EdgeScrubTimeRowBottomPad = 10.dp
-private val EdgeScrubTimeRowHeight = 36.dp
-private val FullscreenControlsVerticalPad = 6.dp
-private val FullscreenControlsLift = 56.dp
-private val FullscreenScrubBottomPad = 42.dp
-private val FullscreenScrubTouchHeight = 34.dp
-private val FullscreenScrubTrackHeight = 4.dp
-private val FullscreenScrubKnob = 8.dp
-private val FullscreenScrubKnobDragging = 11.dp
-private val FullscreenTimeRowBottomFromEdge = 62.dp
 @Composable
 fun FullscreenPlayer(
     state: PlayerState,
