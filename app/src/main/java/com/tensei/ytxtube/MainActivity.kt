@@ -1,4 +1,4 @@
-package com.tensei.ytxtube
+jpackage com.tensei.ytxtube
 
 import android.Manifest
 import android.app.Activity
@@ -1197,4 +1197,8 @@ fun FullscreenPlayer(
             portraitEdgeScrub = false,
         )
     }
+}
+@Composable
+fun QualitySheet(state: PlayerState, onDismiss: () -> Unit) {
+    onDismiss()
 }
