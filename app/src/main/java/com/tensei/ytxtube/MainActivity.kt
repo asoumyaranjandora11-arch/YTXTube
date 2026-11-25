@@ -1202,3 +1202,17 @@ fun FullscreenPlayer(
 fun QualitySheet(state: PlayerState, onDismiss: () -> Unit) {
     onDismiss()
 }
+@Composable
+fun PlayerSettingsSheet(state: PlayerState, backdrop: Backdrop, onDismiss: () -> Unit) {
+    onDismiss()
+}
+
+@Composable
+fun SpeedSheet(state: PlayerState, backdrop: Backdrop, onDismiss: () -> Unit) {
+    onDismiss()
+}
+
+@Composable
+fun AudioTrackSheet(state: PlayerState, backdrop: Backdrop, onDismiss: () -> Unit) {
+    onDismiss()
+}
