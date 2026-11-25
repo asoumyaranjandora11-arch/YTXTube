@@ -1812,4 +1812,27 @@ private val FullscreenScrubTrackHeight = 4.dp
 private val FullscreenScrubKnob = 8.dp
 private val FullscreenScrubKnobDragging = 11.dp
 private val FullscreenTimeRowBottomFromEdge = 62.dp
-    
+@Composable
+fun FullscreenPlayer(
+    state: PlayerState,
+    onExit: () -> Unit,
+) {
+    BackHandler(onBack = onExit)
+    SystemBarsHidden(true)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        VideoContent(
+            state = state,
+            fullscreen = true,
+            onCollapse = onExit,
+            onToggleFullscreen = onExit,
+            modifier = Modifier.fillMaxSize(),
+            interactive = true,
+            portraitEdgeScrub = false,
+        )
+    }
+}
+
