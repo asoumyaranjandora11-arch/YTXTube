@@ -50,10 +50,10 @@ object GlassQuality {
         private set
 
     fun init(context: Context) {
-        val am = context.getSystemService(ActivityManager::class.java)
-        deviceSupports = isRuntimeShaderSupported() && am?.isLowRamDevice != true
-        effectsSupported = deviceSupports && GlassSettings.enabled
-    }
+        deviceSupports = isRuntimeShaderSupported()
+        effectsSupported = deviceSupports && GlassSettings.enabled 
+}
+        
 
     fun setEnabled(enabled: Boolean) {
         effectsSupported = deviceSupports && enabled
@@ -101,8 +101,9 @@ fun glassFill(alpha: Float = 1f): Color {
         return MaterialTheme.colorScheme.surfaceContainerHigh
     }
     val dark = isSystemInDarkTheme()
-    return if (dark) Color(0xFF121212).copy(alpha = 0.38f * alpha) else
-        Color(0xFFFAFAFA).copy(alpha = 0.34f * alpha)
+    return if (dark) Color(0xFF121212).copy(alpha = 0.18f * alpha) else
+        Color(0xFFFAFAFA).copy(alpha = 0.22f * alpha)
+        
 }
 
 /**
@@ -132,14 +133,14 @@ data class GlassSpec(
 
 @Composable
 fun glassSpec(
-    shape: Shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp),
+    shape: Shape = androidx.compose.foundation.shape.RoundedCornerShape(50.dp),
     tint: Color = glassFill(),
-    blur: Dp = 18.dp,
-    refractionHeight: Dp = 14.dp,
-    refractionAmount: Dp = 22.dp,
+    blur: Dp = 26.dp,
+    refractionHeight: Dp = 20.dp,
+    refractionAmount: Dp = 32.dp,
     shadow: Shadow? = Shadow.Default,
     highlight: Highlight? = Highlight.Default,
-    innerShadow: InnerShadow? = InnerShadow.Default.copy(radius = 10.dp, alpha = 0.5f),
+    innerShadow: InnerShadow? = InnerShadow.Default.copy(radius = 12.dp, alpha = 0.65f),
     chromaticAberration: Boolean = true,
 ): GlassSpec = GlassSpec(
     shape = shape,
@@ -202,7 +203,7 @@ private fun Modifier.fallbackGlass(spec: GlassSpec): Modifier =
             .drawBehind {
                 drawRect(
                     Brush.verticalGradient(
-                        0f to Color.White.copy(alpha = 0.14f),
+                        0f to Color.White.copy(alpha = 0.28f),
                         0.55f to Color.Transparent,
                         1f to Color.Black.copy(alpha = 0.05f),
                     ),
