@@ -230,7 +230,7 @@ fun Modifier.liquidGlass(backdrop: Backdrop, spec: GlassSpec): Modifier =
                     spec.refractionHeight.toPx(),
                     spec.refractionAmount.toPx(),
                     chromaticAberration = spec.chromaticAberration,
-                ).metallicBorder(spec.shape)
+                )
             },
             highlight = spec.highlight?.let { h -> { h } },
             shadow = spec.shadow?.let { s -> { s } },
@@ -238,7 +238,7 @@ fun Modifier.liquidGlass(backdrop: Backdrop, spec: GlassSpec): Modifier =
             onDrawSurface = {
                 if (spec.tint.isSpecified) drawRect(spec.tint)
             },
-        )
+        ).metallicBorder(spec.shape)
     } else {
         // Android 12 and older (plus low-end TVs without runtime shaders) cannot
         // render the refractive glass shader. Keep the same frosted surface look
