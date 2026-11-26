@@ -167,12 +167,18 @@ fun BrandMark() {
 @Composable
 fun CircleAction(icon: ImageVector, contentDescription: String, onClick: () -> Unit) {
     val c = MaterialTheme.colorScheme
+    val shape = CircleShape
     Box(
         modifier = Modifier
             .size(38.dp)
             .pressable(onClick = onClick)
-            .clip(CircleShape)
-            .background(c.surfaceContainerHigh),
+            .then(
+                if (isDarkTheme() && ThemeSettings.mode != "amoled") {
+                    Modifier.glassmorphicSurface(shape, GlassmorphicTheme.surface)
+                } else {
+                    Modifier.clip(shape).background(c.surfaceContainerHigh).metallicBorder(shape)
+                }
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription, tint = c.onSurface, modifier = Modifier.size(20.dp))
@@ -270,6 +276,7 @@ fun DurationPill(seconds: Long, modifier: Modifier = Modifier, small: Boolean = 
             modifier = modifier
                 .clip(RoundedCornerShape(4.dp))
                 .background(Color(0xFFCC0000))
+                .metallicBorder(RoundedCornerShape(4.dp))
                 .padding(horizontal = if (small) 5.dp else 6.dp, vertical = if (small) 1.5.dp else 2.5.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -291,6 +298,7 @@ fun DurationPill(seconds: Long, modifier: Modifier = Modifier, small: Boolean = 
         modifier = modifier
             .clip(RoundedCornerShape(4.dp))
             .background(Color.Black.copy(alpha = 0.72f))
+            .metallicBorder(RoundedCornerShape(4.dp))
             .padding(horizontal = if (small) 5.dp else 6.dp, vertical = if (small) 1.dp else 2.dp),
     ) {
         Text(
@@ -352,6 +360,13 @@ fun VideoCard(video: VideoItem, onClick: () -> Unit, modifier: Modifier = Modifi
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .then(
+                if (isDarkTheme() && ThemeSettings.mode != "amoled") {
+                    Modifier.glassmorphicSurface(RoundedCornerShape(16.dp))
+                } else {
+                    Modifier.clip(RoundedCornerShape(16.dp)).metallicBorder(RoundedCornerShape(16.dp))
+                }
+            )
             .prefetchOnPress(video.id)
             .pressable(pressedScale = 0.98f, onLongClick = { menu(video) }, onClick = onClick)
             .padding(bottom = 16.dp),
@@ -423,7 +438,14 @@ fun CompactVideoCard(video: VideoItem, onClick: () -> Unit, modifier: Modifier =
             .fillMaxWidth()
             .prefetchOnPress(video.id)
             .pressable(pressedScale = 0.98f, onLongClick = { menu(video) }, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .then(
+                if (isDarkTheme() && ThemeSettings.mode != "amoled") {
+                    Modifier.glassmorphicSurface(RoundedCornerShape(16.dp))
+                } else {
+                    Modifier.clip(RoundedCornerShape(16.dp)).metallicBorder(RoundedCornerShape(16.dp))
+                }
+            ),
         verticalAlignment = Alignment.Top,
     ) {
         // बाएं तरफ छोटा थंबनेल (पहली फोटो जैसा)
@@ -586,20 +608,24 @@ fun EmptyState(
 @Composable
 fun PillButton(text: String, onClick: () -> Unit, icon: ImageVector? = null) {
     val c = MaterialTheme.colorScheme
+    val darkGlass = isDarkTheme() && ThemeSettings.mode != "amoled"
+    val shape = CircleShape
     Row(
         modifier = Modifier
             .pressable(onClick = onClick)
             .height(44.dp)
-            .clip(CircleShape)
-            .background(c.primary)
+            .then(
+                if (darkGlass) Modifier.glassmorphicSurface(shape)
+                else Modifier.clip(shape).background(c.primary).metallicBorder(shape)
+            )
             .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
-            Icon(icon, null, tint = c.onPrimary, modifier = Modifier.size(18.dp))
+            Icon(icon, null, tint = if (darkGlass) c.onSurface else c.onPrimary, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
         }
-        Text(text, color = c.onPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text(text, color = if (darkGlass) c.onSurface else c.onPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
     }
 }
 
@@ -705,6 +731,13 @@ fun CommunityCard(post: CommunityPost, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .then(
+                if (isDarkTheme() && ThemeSettings.mode != "amoled") {
+                    Modifier.glassmorphicSurface(RoundedCornerShape(16.dp))
+                } else {
+                    Modifier.clip(RoundedCornerShape(16.dp)).metallicBorder(RoundedCornerShape(16.dp))
+                }
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

@@ -576,28 +576,42 @@ private val FullscreenPull = 96.dp
 @Composable
 private fun SubscribeButton(subscribed: Boolean, onClick: () -> Unit) {
     val c = MaterialTheme.colorScheme
-    val reduced = rememberReducedMotion()
-
-
-    val radius by animateDpAsState(if (subscribed) 14.dp else 18.dp, if (reduced) tween(0) else spring(dampingRatio = 0.6f, stiffness = 500f), label = "subShape")
+    val darkGlass = isDarkTheme() && ThemeSettings.mode != "amoled"
     Row(
         modifier = Modifier
             .squishOn(subscribed)
             .height(34.dp)
             .pressable(onClick = onClick)
-            .clip(RoundedCornerShape(radius))
-            .background(if (subscribed) c.secondaryContainer else c.onSurface)
+            .then(
+                if (darkGlass) {
+                    Modifier.glassmorphicSurface(
+                        CircleShape,
+                        GlassmorphicTheme.surface.copy(alpha = if (subscribed) 0.76f else 0.58f),
+                    )
+                } else {
+                    Modifier.clip(CircleShape)
+                        .background(if (subscribed) c.secondaryContainer else c.onSurface)
+                        .metallicBorder(CircleShape)
+                }
+            )
             .animateContentSize(spring(dampingRatio = 0.7f, stiffness = 500f))
             .padding(horizontal = if (subscribed) 10.dp else 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (subscribed) {
-            FlourishIcon(Icons.Rounded.NotificationsActive, null, active = subscribed, kind = Flourish.Ring, tint = c.onSecondaryContainer, size = 15.dp)
+            FlourishIcon(
+                Icons.Rounded.NotificationsActive,
+                null,
+                active = subscribed,
+                kind = Flourish.Ring,
+                tint = if (darkGlass) GlassmorphicTheme.goldStart else c.onSecondaryContainer,
+                size = 15.dp,
+            )
             Spacer(Modifier.width(5.dp))
         }
         Text(
             if (subscribed) I18n.t("subscribed", "Subscribed") else I18n.t("subscribe", "Subscribe"),
-            color = if (subscribed) c.onSecondaryContainer else c.surface,
+            color = if (darkGlass) GlassmorphicTheme.goldStart else if (subscribed) c.onSecondaryContainer else c.surface,
             fontWeight = FontWeight.Bold, fontSize = 12.5.sp,
         )
     }
@@ -627,7 +641,7 @@ private fun PlayerActions(state: PlayerState) {
                 label = if (item.localUri != null) I18n.t("downloaded", "Downloaded") else I18n.t("download", "Download"),
                 active = item.localUri != null,
                 flourish = Flourish.Pop,
-                shape = RoundedCornerShape(18.dp),
+                shape = CircleShape,
                 description = "Download video",
             ) {
                 if (item.localUri != null) {
@@ -650,7 +664,7 @@ private fun PlayerActions(state: PlayerState) {
                 label = I18n.t("share", "Share"),
                 active = false,
                 flourish = Flourish.Pop,
-                shape = RoundedCornerShape(18.dp),
+                shape = CircleShape,
                 description = "Share video",
             ) {
                 val url = "https://youtu.be/${item.id}"
@@ -682,14 +696,14 @@ private fun AccountActions(state: PlayerState) {
     var lastLikes by remember { mutableStateOf(likes) }
     val rising = likes >= lastLikes
     SideEffect { lastLikes = likes }
-    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         ActionPill(
             icon = if (like == LikeStatus.Like) Icons.Rounded.ThumbUp else Icons.Outlined.ThumbUp,
             label = likes.takeIf { it > 0 }?.let { formatCount(it) },
             active = like == LikeStatus.Like,
             flourish = Flourish.Pop,
             labelRollsUp = rising,
-            shape = RoundedCornerShape(topStart = 18.dp, bottomStart = 18.dp, topEnd = 6.dp, bottomEnd = 6.dp),
+            shape = CircleShape,
             description = "Like",
         ) {
             state.toggleLike()
@@ -699,7 +713,7 @@ private fun AccountActions(state: PlayerState) {
             label = state.displayDislikes.takeIf { it >= 0 }?.let { formatCount(it) },
             active = like == LikeStatus.Dislike,
             flourish = Flourish.Droop,
-            shape = RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp, topEnd = 18.dp, bottomEnd = 18.dp),
+            shape = CircleShape,
             description = "Dislike",
         ) {
             state.toggleDislike()
@@ -710,7 +724,7 @@ private fun AccountActions(state: PlayerState) {
         label = if (state.inWatchLater) I18n.t("saved", "Saved") else I18n.t("save", "Save"),
         active = state.inWatchLater,
         flourish = Flourish.Drop,
-        shape = RoundedCornerShape(18.dp),
+        shape = CircleShape,
         description = "Save to Watch later",
     ) {
         if (signedIn) state.toggleWatchLater()
@@ -730,20 +744,48 @@ private fun ActionPill(
     onClick: () -> Unit,
 ) {
     val c = MaterialTheme.colorScheme
-    val bg by androidx.compose.animation.animateColorAsState(if (active) c.primary else c.surfaceContainerHigh, tween(220), label = "pillBg")
-    val tint by androidx.compose.animation.animateColorAsState(if (active) c.onPrimary else c.onSurface, tween(220), label = "pillInk")
+    val darkGlass = isDarkTheme() && ThemeSettings.mode != "amoled"
+    val bg by androidx.compose.animation.animateColorAsState(
+        when {
+            darkGlass && active -> GlassmorphicTheme.surface.copy(alpha = 0.78f)
+            darkGlass -> GlassmorphicTheme.surface.copy(alpha = 0.5f)
+            active -> c.primary
+            else -> c.surfaceContainerHigh
+        },
+        tween(220),
+        label = "pillBg",
+    )
+    val tint by androidx.compose.animation.animateColorAsState(
+        when {
+            darkGlass -> if (active) GlassmorphicTheme.goldStart else c.onSurface
+            active -> c.onPrimary
+            else -> c.onSurface
+        },
+        tween(220),
+        label = "pillInk",
+    )
     Row(
         modifier = Modifier
             .squishOn(active)
             .height(36.dp)
             .pressable(onClick = onClick)
-
-            .background(bg, shape)
+            .then(
+                if (darkGlass) Modifier.glassmorphicSurface(shape, bg)
+                else Modifier.clip(shape).background(bg).metallicBorder(shape)
+            )
             .animateContentSize(spring(dampingRatio = 0.7f, stiffness = 500f))
             .padding(horizontal = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        FlourishIcon(icon, description, active = active, kind = flourish, tint = tint, size = 18.dp, sparkColor = c.primary)
+        FlourishIcon(
+            icon,
+            description,
+            active = active,
+            kind = flourish,
+            tint = tint,
+            size = 18.dp,
+            sparkColor = if (darkGlass) GlassmorphicTheme.goldStart else c.primary,
+        )
         if (label != null) {
             Spacer(Modifier.width(5.dp))
             RollingText(label, tint, up = labelRollsUp, fontSize = 12.5.sp)
@@ -1932,48 +1974,79 @@ private fun VideoDetailsBlock(
 ) {
     Column(Modifier.padding(horizontal = 20.dp)) {
         Spacer(Modifier.height(18.dp))
-        Text(
-            item.title,
-            fontFamily = RoundedHeavy,
-            fontWeight = FontWeight.ExtraBold,
-            fontSize = 18.sp,
-            lineHeight = 22.sp,
-            letterSpacing = (-0.4).sp,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Spacer(Modifier.height(6.dp))
         val stats = listOfNotNull(
             item.views.takeIf { it >= 0 }?.let { "${formatCount(it)} views" },
             item.uploaded?.ifBlank { null },
             details?.likes?.takeIf { it > 0 }?.let { "${formatCount(it)} likes" },
         ).joinToString(" · ")
         val hasDescription = !details?.description.isNullOrBlank()
-        Row(
-            modifier = if (hasDescription) Modifier.pressable(pressedScale = 0.98f) { onToggleDescription() } else Modifier,
+        val metadataShape = RoundedCornerShape(16.dp)
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .then(
+                    if (isDarkTheme() && ThemeSettings.mode != "amoled") {
+                        Modifier.glassmorphicSurface(metadataShape)
+                    } else {
+                        Modifier.clip(metadataShape)
+                            .background(c.surfaceContainerHigh)
+                            .metallicBorder(metadataShape)
+                    }
+                )
+                .padding(16.dp),
         ) {
-            Text(stats, color = c.onSurfaceVariant, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            if (hasDescription) {
+            Text(
+                item.title,
+                fontFamily = RoundedHeavy,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 18.sp,
+                lineHeight = 22.sp,
+                letterSpacing = (-0.4).sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(6.dp))
+            Row(
+                modifier = if (hasDescription) Modifier.pressable(pressedScale = 0.98f) { onToggleDescription() } else Modifier,
+            ) {
+                Text(stats, color = c.onSurfaceVariant, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                if (hasDescription) {
+                    Text(
+                        if (descriptionOpen) "  less" else "  …more",
+                        color = c.onSurface,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                }
+            }
+            if (descriptionOpen && details != null) {
                 Text(
-                    if (descriptionOpen) "  less" else "  …more",
-                    color = c.onSurface,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    details.description,
+                    modifier = Modifier.padding(top = 10.dp),
+                    color = c.onSurfaceVariant,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    fontWeight = FontWeight.Medium,
                 )
             }
         }
-        if (descriptionOpen && details != null) {
-            Text(
-                details.description,
-                modifier = Modifier.padding(top = 10.dp),
-                color = c.onSurfaceVariant,
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-        Spacer(Modifier.height(16.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Spacer(Modifier.height(12.dp))
+        val channelShape = RoundedCornerShape(16.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(
+                    if (isDarkTheme() && ThemeSettings.mode != "amoled") {
+                        Modifier.glassmorphicSurface(channelShape)
+                    } else {
+                        Modifier.clip(channelShape)
+                            .background(c.surfaceContainerHigh)
+                            .metallicBorder(channelShape)
+                    }
+                )
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             val openChannel = LocalChannelOpener.current
             val channelUrl = details?.item?.channelUrl ?: item.channelUrl
 

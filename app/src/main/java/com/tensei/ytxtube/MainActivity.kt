@@ -511,7 +511,7 @@ fun YtxTubeApp() {
         derivedStateOf { player.current != null && (player.expanded || morph.dragging || morph.progress.isRunning || morph.progress.value > 0f) }
     }
 
-    BoxWithConstraints(Modifier.fillMaxSize().background(c.surface)) {
+    BoxWithConstraints(Modifier.fillMaxSize().appScreenBackground()) {
 
         val stageAspect = player.stageAspect
         val stageTopPx = with(density) {
@@ -584,7 +584,7 @@ fun YtxTubeApp() {
             Modifier
                 .fillMaxSize()
                 .layerBackdrop(pageBackdrop)
-                .background(c.surface)
+                .appScreenBackground()
                 .graphicsLayer {
                     rotationY = appFlipRotation.value
                     cameraDistance = 16f

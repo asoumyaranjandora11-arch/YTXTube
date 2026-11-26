@@ -152,7 +152,7 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(c.surface)
+                .appScreenBackground()
                 .then(if (blurRadius > 0.dp) Modifier.blur(blurRadius) else Modifier)
         ) {
             BackScreenHeader(onBack = onBack) {
@@ -587,8 +587,13 @@ private fun SettingsCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(c.surfaceContainerHigh),
+            .then(if (isDarkTheme() && ThemeSettings.mode != "amoled") {
+                Modifier.glassmorphicSurface(RoundedCornerShape(18.dp), GlassmorphicTheme.surface)
+            } else {
+                Modifier.clip(RoundedCornerShape(18.dp))
+                    .background(c.surfaceContainerHigh)
+                    .metallicBorder(RoundedCornerShape(18.dp))
+            }),
         content = content,
     )
 }
@@ -961,7 +966,8 @@ private fun QualitySelectionDialog(
             colors = CardDefaults.cardColors(containerColor = c.surfaceContainer),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(16.dp)
+                .metallicBorder(RoundedCornerShape(24.dp)),
         ) {
             Column(
                 modifier = Modifier
@@ -1112,7 +1118,8 @@ private fun DownloadFolderSelectionDialog(
             colors = CardDefaults.cardColors(containerColor = c.surfaceContainer),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(16.dp)
+                .metallicBorder(RoundedCornerShape(24.dp)),
         ) {
             Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
                 Text(
@@ -1911,8 +1918,15 @@ private fun SettingsProfileCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(c.surfaceContainerHigh)
+            .then(
+                if (isDarkTheme() && ThemeSettings.mode != "amoled") {
+                    Modifier.glassmorphicSurface(RoundedCornerShape(18.dp))
+                } else {
+                    Modifier.clip(RoundedCornerShape(18.dp))
+                        .background(c.surfaceContainerHigh)
+                        .metallicBorder(RoundedCornerShape(18.dp))
+                }
+            )
             .padding(vertical = 2.dp)
     ) {
         Row(

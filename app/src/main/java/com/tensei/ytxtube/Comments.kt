@@ -270,7 +270,8 @@ class CommentsState(private val scope: CoroutineScope) {
 @Composable
 fun CommentsCard(state: CommentsState, onOpen: () -> Unit, live: Boolean = false) {
     val c = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(16.dp)
+    val darkGlass = isDarkTheme() && ThemeSettings.mode != "amoled"
     val first = state.comments.firstOrNull()
     Column(
         modifier = Modifier
@@ -281,8 +282,10 @@ fun CommentsCard(state: CommentsState, onOpen: () -> Unit, live: Boolean = false
                 pressedScale = 0.98f,
                 onClick = onOpen,
             )
-            .clip(shape)
-            .background(c.surfaceContainerLow)
+            .then(
+                if (darkGlass) Modifier.glassmorphicSurface(shape)
+                else Modifier.clip(shape).background(c.surfaceContainerLow).metallicBorder(shape)
+            )
             .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

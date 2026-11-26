@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -20,6 +19,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.Backdrop
@@ -31,6 +31,67 @@ import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.isRuntimeShaderSupported
 import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.Shadow
+
+object GlassmorphicTheme {
+    val backgroundStart = Color(0xFF0D0E12)
+    val backgroundMiddle = Color(0xFF1B1528)
+    val backgroundEnd = Color(0xFF24192C)
+    val surface = Color(0x661A1A24)
+    val goldStart = Color(0xFFE6C88A)
+    val goldMid = Color(0xFF9E7F47)
+    val borderBrush = Brush.linearGradient(listOf(goldStart, goldMid, goldStart))
+}
+
+fun Modifier.glassmorphicBackground(): Modifier = drawBehind {
+    drawRect(
+        Brush.verticalGradient(
+            colors = listOf(
+                GlassmorphicTheme.backgroundStart,
+                GlassmorphicTheme.backgroundMiddle,
+                GlassmorphicTheme.backgroundEnd,
+            ),
+        ),
+    )
+    drawRect(
+        Brush.radialGradient(
+            colors = listOf(GlassmorphicTheme.backgroundEnd.copy(alpha = 0.62f), Color.Transparent),
+            center = Offset(size.width * 0.72f, size.height * 0.24f),
+            radius = maxOf(size.width, size.height) * 0.92f,
+        ),
+    )
+}
+
+fun Modifier.metallicBorder(
+    shape: Shape,
+    width: Dp = 1.dp,
+): Modifier = border(width, GlassmorphicTheme.borderBrush, shape)
+
+fun Modifier.glassmorphicSurface(
+    shape: Shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
+    fill: Color = GlassmorphicTheme.surface,
+    borderWidth: Dp = 1.dp,
+): Modifier = clip(shape)
+    .background(fill)
+    .drawBehind {
+        drawRect(
+            Brush.verticalGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = 0.10f),
+                    Color.Transparent,
+                    Color.Black.copy(alpha = 0.04f),
+                ),
+            ),
+        )
+    }
+    .metallicBorder(shape, borderWidth)
+
+@Composable
+fun Modifier.appScreenBackground(): Modifier =
+    if (isDarkTheme() && ThemeSettings.mode != "amoled") {
+        glassmorphicBackground()
+    } else {
+        background(MaterialTheme.colorScheme.surface)
+    }
 
 /**
  * One place to decide whether the refractive glass shaders can run. Old Android
@@ -100,8 +161,8 @@ fun glassFill(alpha: Float = 1f): Color {
         // Solid Material surface: no translucency, no blur, no backdrop.
         return MaterialTheme.colorScheme.surfaceContainerHigh
     }
-    val dark = isSystemInDarkTheme()
-    return if (dark) Color(0xFF121212).copy(alpha = 0.18f * alpha) else
+    val dark = isDarkTheme()
+    return if (dark) GlassmorphicTheme.surface.copy(alpha = GlassmorphicTheme.surface.alpha * alpha) else
         Color(0xFFFAFAFA).copy(alpha = 0.22f * alpha)
         
 }
@@ -169,7 +230,7 @@ fun Modifier.liquidGlass(backdrop: Backdrop, spec: GlassSpec): Modifier =
                     spec.refractionHeight.toPx(),
                     spec.refractionAmount.toPx(),
                     chromaticAberration = spec.chromaticAberration,
-                )
+                ).metallicBorder(spec.shape)
             },
             highlight = spec.highlight?.let { h -> { h } },
             shadow = spec.shadow?.let { s -> { s } },
@@ -192,22 +253,11 @@ private fun Modifier.fallbackGlass(spec: GlassSpec): Modifier =
         this
             .clip(spec.shape)
             .background(spec.tint.copy(alpha = 1f))
+            .metallicBorder(spec.shape)
     } else {
         // Android 12 and older (plus low-end TVs without runtime shaders) cannot
         // render the refractive glass shader. Keep the same frosted surface look
         // with a translucent fill, soft top sheen and hairline edge instead of
         // removing the glass entirely.
-        this
-            .clip(spec.shape)
-            .background(spec.tint)
-            .drawBehind {
-                drawRect(
-                    Brush.verticalGradient(
-                        0f to Color.White.copy(alpha = 0.28f),
-                        0.55f to Color.Transparent,
-                        1f to Color.Black.copy(alpha = 0.05f),
-                    ),
-                )
-            }
-            .border(1.dp, Color.White.copy(alpha = 0.16f), spec.shape)
+        this.glassmorphicSurface(spec.shape, spec.tint)
     }

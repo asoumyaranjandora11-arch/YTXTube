@@ -70,7 +70,7 @@ fun SignInScreen(onDone: () -> Unit, onCancel: () -> Unit) {
     var finishing by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    Column(Modifier.fillMaxSize().background(c.surface).statusBarsPadding().navigationBarsPadding()) {
+    Column(Modifier.fillMaxSize().appScreenBackground().statusBarsPadding().navigationBarsPadding()) {
         Row(
             Modifier
                 .fillMaxWidth()
@@ -178,7 +178,7 @@ fun SignInScreen(onDone: () -> Unit, onCancel: () -> Unit) {
             )
             if (finishing || error != null) {
                 Column(
-                    Modifier.fillMaxSize().background(c.surface).padding(32.dp),
+                    Modifier.fillMaxSize().appScreenBackground().padding(32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
                 ) {

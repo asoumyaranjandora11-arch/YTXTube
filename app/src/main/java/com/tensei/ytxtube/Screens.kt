@@ -141,16 +141,24 @@ fun HomeFilterChips(
     ) {
         items(HomeFilter.entries) { filter ->
             val isSelected = filter == selected
+            val shape = CircleShape
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        when {
-                            isSelected -> if (isDark || isAmoled) Color.White else Color.Black
-                            isAmoled -> Color(0xFF161616)
-                            isDark -> Color(0xFF272727)
-                            else -> Color(0xFFE5E5E5)
-                        }
+                    .then(
+                        if (isDark && !isAmoled) Modifier.glassmorphicSurface(
+                            shape = shape,
+                            fill = GlassmorphicTheme.surface.copy(alpha = if (isSelected) 0.76f else 0.46f),
+                        ) else Modifier
+                            .clip(shape)
+                            .background(
+                                when {
+                                    isSelected -> if (isDark || isAmoled) Color.White else Color.Black
+                                    isAmoled -> Color(0xFF161616)
+                                    isDark -> Color(0xFF272727)
+                                    else -> Color(0xFFE5E5E5)
+                                }
+                            )
+                            .metallicBorder(shape)
                     )
                     .pressable(pressedScale = 0.94f) { onSelect(filter) }
                     .padding(horizontal = 14.dp, vertical = 7.dp),
@@ -159,7 +167,7 @@ fun HomeFilterChips(
                 Text(
                     filter.label,
                     color = when {
-                        isSelected -> if (isDark || isAmoled) Color.Black else Color.White
+                        isSelected -> if (isDark && !isAmoled) GlassmorphicTheme.goldStart else if (isDark || isAmoled) Color.Black else Color.White
                         isDark || isAmoled -> Color.White
                         else -> Color(0xFF0F0F0F)
                     },
@@ -168,6 +176,34 @@ fun HomeFilterChips(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun HomeSearchBar(onSearch: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .height(48.dp)
+            .pressable(onClick = onSearch)
+            .glassmorphicSurface(CircleShape, GlassmorphicTheme.surface.copy(alpha = 0.58f))
+            .padding(horizontal = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(
+            Icons.Rounded.Search,
+            contentDescription = null,
+            tint = GlassmorphicTheme.goldStart,
+            modifier = Modifier.size(20.dp),
+        )
+        Text(
+            I18n.t("search_hint", "Search YouTube"),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Medium,
+        )
     }
 }
 
@@ -218,7 +254,8 @@ fun HomeScreen(
         resetKey = scrollToTop to (lib.home.generation to activeFilter),
         header = {
             Column(Modifier.fillMaxWidth()) {
-                ScreenHeader(title = "YTXTube", brandMark = true) { HeaderActions(onSearch, onAccount) }
+                ScreenHeader(title = "YTXTube", brandMark = true) { AccountAction(onAccount) }
+                HomeSearchBar(onSearch)
                 HomeFilterChips(selected = activeFilter, onSelect = { activeFilter = it })
             }
         },
@@ -541,7 +578,7 @@ fun AllSubscriptionsScreen(
 ) {
     val c = MaterialTheme.colorScheme
     val openChannel = LocalChannelOpener.current
-    Box(Modifier.fillMaxSize().background(c.surface)) {
+    Box(Modifier.fillMaxSize().appScreenBackground()) {
         Column(Modifier.fillMaxSize()) {
             BackScreenHeader(onBack = onBack) {
                 Text(
@@ -714,13 +751,22 @@ fun LibraryScreen(
 @Composable
 private fun HistoryCard(video: VideoItem, onClick: () -> Unit) {
     val menu = LocalVideoMenu.current
-    Column(Modifier.width(168.dp).prefetchOnPress(video.id).pressable(pressedScale = 0.97f, onLongClick = { menu(video) }, onClick = onClick)) {
+    val shape = RoundedCornerShape(16.dp)
+    Column(
+        Modifier.width(168.dp)
+            .then(
+                if (isDarkTheme() && ThemeSettings.mode != "amoled") Modifier.glassmorphicSurface(shape)
+                else Modifier.clip(shape).metallicBorder(shape)
+            )
+            .prefetchOnPress(video.id)
+            .pressable(pressedScale = 0.97f, onLongClick = { menu(video) }, onClick = onClick)
+    ) {
         Box {
-            Thumbnail(video.thumbnail, Modifier.fillMaxWidth().aspectRatio(16f / 9f), radius = 12)
+            Thumbnail(video.thumbnail, Modifier.fillMaxWidth().aspectRatio(16f / 9f), radius = 16)
             DurationPill(video.durationSec, Modifier.align(Alignment.BottomEnd).padding(6.dp), small = true)
         }
         Spacer(Modifier.height(7.dp))
-        Text(video.title, fontSize = 13.sp, fontWeight = FontWeight.Bold, lineHeight = 16.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(video.title, Modifier.padding(horizontal = 8.dp, vertical = 4.dp), fontSize = 13.sp, fontWeight = FontWeight.Bold, lineHeight = 16.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -770,7 +816,7 @@ fun PlaylistScreen(
 ) {
     LaunchedEffect(playlist.id) { feed.ensureLoaded() }
     val avatarSeed = remember(channelAvatarSeed) { channelAvatarSeed }
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
+    Box(Modifier.fillMaxSize().appScreenBackground()) {
     CollapsingHeaderLayout(
         resetKey = feed.generation,
         header = {
@@ -925,7 +971,7 @@ fun SearchScreen(
         }, 120)
         state.submit()
     }
-    Box(Modifier.fillMaxSize().background(c.surface).overlayTouchBlock()) {
+    Box(Modifier.fillMaxSize().appScreenBackground().overlayTouchBlock()) {
 
     CollapsingHeaderLayout(
         resetKey = scrollToTop to state.generation,

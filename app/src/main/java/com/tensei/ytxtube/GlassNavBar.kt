@@ -47,7 +47,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
@@ -155,14 +157,14 @@ fun LiquidBottomTabs(
     val isAmoled = ThemeSettings.mode == "amoled"
     val accentColor =
         if (isLightTheme) Color(0xFF0088FF)
-        else Color(0xFF0091FF)
+        else GlassmorphicTheme.goldStart
     val glassSupported = GlassQuality.effectsSupported
-    val solidContainer = if (isAmoled) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+    val solidContainer = if (isAmoled) Color.Black else Color(0xFF1A1A24)
     val containerColor = when {
         !glassSupported -> solidContainer
         isAmoled -> Color(0xFF000000).copy(0.45f)
         isLightTheme -> Color(0xFFFAFAFA).copy(0.4f)
-        else -> Color(0xFF121212).copy(0.4f)
+        else -> GlassmorphicTheme.surface
     }
 
     val tabsBackdrop = rememberLayerBackdrop()
@@ -290,16 +292,12 @@ fun LiquidBottomTabs(
                         Modifier
                             .clip(Capsule())
                             .background(containerColor)
-                            .border(
-                                1.dp,
-                                MaterialTheme.colorScheme.outlineVariant,
-                                Capsule(),
-                            )
                     }
                 )
                 .then(interactiveHighlight.modifier)
                 .height(64f.dp)
                 .fillMaxWidth()
+                .border(1.dp, GlassmorphicTheme.borderBrush, Capsule())
         )
 
         // 2. Moving active tab indicator pill. It stays *behind* the tab row so
@@ -356,7 +354,7 @@ fun LiquidBottomTabs(
                                 val progress = dampedDragAnimation.pressProgress
                                 drawRect(
                                     if (isLightTheme) Color.Black.copy(0.12f)
-                                    else Color.White.copy(0.12f),
+                                    else accentColor.copy(alpha = 0.16f),
                                     alpha = 1f - progress
                                 )
                                 drawRect(Color.Black.copy(alpha = 0.03f * progress))
@@ -427,13 +425,29 @@ fun RowScope.LiquidNavTab(
 ) {
     val isLightTheme = !isDarkSurface && !isSystemInDarkTheme() && ThemeSettings.mode != "dark" && ThemeSettings.mode != "amoled"
     val contentColor = if (isLightTheme) Color.Black else Color.White
+    val accentColor = if (isLightTheme) Color(0xFF0088FF) else GlassmorphicTheme.goldStart
     val active = tab == Tab.Downloads && Downloads.busy
 
     LiquidBottomTab(onClick = onClick) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(28.dp)
+            modifier = Modifier.size(40.dp)
         ) {
+            if (selected) {
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .drawBehind {
+                            drawCircle(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(accentColor.copy(alpha = 0.42f), Color.Transparent),
+                                    center = Offset(size.width / 2f, size.height / 2f),
+                                    radius = size.minDimension / 2f,
+                                ),
+                            )
+                        },
+                )
+            }
             if (active) {
                 CircularProgressIndicator(
                     progress = { Downloads.progress },

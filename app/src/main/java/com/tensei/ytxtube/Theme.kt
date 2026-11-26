@@ -447,7 +447,7 @@ object ThemeSettings {
     var seed by mutableStateOf<String?>(null)
         private set
 
-    var mode by mutableStateOf("system")
+    var mode by mutableStateOf("dark")
         private set
     var useSystemFont by mutableStateOf(false)
         private set
@@ -455,7 +455,7 @@ object ThemeSettings {
     fun init(context: Context) {
         val p = context.getSharedPreferences("appearance", Context.MODE_PRIVATE).also { prefs = it }
         seed = p.getString("seed", null) ?: SEED_YOUTUBE
-        mode = p.getString("mode", "system") ?: "system"
+        mode = p.getString("mode", "dark") ?: "dark"
         useSystemFont = p.getBoolean("use_system_font", false)
     }
 
@@ -547,6 +547,22 @@ fun YtxTubeTheme(content: @Composable () -> Unit) {
             onBackground = Color(0xFFF5F5F5),
             onSurface = Color(0xFFF5F5F5),
             outlineVariant = Color(0xFF1F1F1F),
+        ).copy(
+            outline = GlassmorphicTheme.goldStart,
+            outlineVariant = GlassmorphicTheme.goldMid.copy(alpha = 0.32f),
+        )
+    } else if (dark) {
+        baseScheme.copy(
+            background = GlassmorphicTheme.backgroundStart,
+            surface = GlassmorphicTheme.backgroundStart,
+            surfaceVariant = Color(0xFF24192C),
+            surfaceContainerLowest = GlassmorphicTheme.backgroundStart,
+            surfaceContainerLow = Color(0x801A1A24),
+            surfaceContainer = Color(0x991A1A24),
+            surfaceContainerHigh = GlassmorphicTheme.surface,
+            surfaceContainerHighest = Color(0x991A1A24),
+            outline = GlassmorphicTheme.goldStart,
+            outlineVariant = GlassmorphicTheme.goldMid.copy(alpha = 0.32f),
         )
     } else baseScheme
 

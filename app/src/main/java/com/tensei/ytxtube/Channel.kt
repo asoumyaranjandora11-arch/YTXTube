@@ -305,7 +305,7 @@ fun ChannelScreen(
             else -> {}
         }
     }
-    Box(Modifier.fillMaxSize().background(c.surface)) {
+    Box(Modifier.fillMaxSize().appScreenBackground()) {
     CollapsingHeaderLayout(
         header = {
         BackScreenHeader(onBack = onBack) {
@@ -456,24 +456,28 @@ fun ChannelScreen(
 @Composable
 private fun ChannelSubscribeButton(subscribed: Boolean, onClick: () -> Unit) {
     val c = MaterialTheme.colorScheme
+    val darkGlass = isDarkTheme() && ThemeSettings.mode != "amoled"
     val container by animateColorAsState(
-        targetValue = if (subscribed) c.secondaryContainer else c.onSurface,
+        targetValue = if (darkGlass) GlassmorphicTheme.surface else if (subscribed) c.secondaryContainer else c.onSurface,
         animationSpec = tween(240, easing = Motion.Emphasized),
         label = "subscribeContainer",
     )
     val content by animateColorAsState(
-        targetValue = if (subscribed) c.onSecondaryContainer else c.surface,
+        targetValue = if (darkGlass) c.onSurface else if (subscribed) c.onSecondaryContainer else c.surface,
         animationSpec = tween(240, easing = Motion.Emphasized),
         label = "subscribeContent",
     )
+    val shape = CircleShape
     Row(
         Modifier
             .squishOn(subscribed)
             .fillMaxWidth()
             .height(46.dp)
             .pressable(onClick = onClick)
-            .clip(CircleShape)
-            .background(container),
+            .then(
+                if (darkGlass) Modifier.glassmorphicSurface(shape, container)
+                else Modifier.clip(shape).background(container).metallicBorder(shape)
+            ),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
