@@ -248,9 +248,8 @@ fun AccountAction(onClick: () -> Unit) {
 fun AccountSheet(onSignIn: () -> Unit, onSignedOut: () -> Unit, onDismiss: () -> Unit) {
     val c = MaterialTheme.colorScheme
     val profile = Account.profile
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = c.surfaceContainerLow,
     ) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 32.dp),
@@ -278,11 +277,11 @@ fun AccountSheet(onSignIn: () -> Unit, onSignedOut: () -> Unit, onDismiss: () ->
             }
 
             Spacer(Modifier.height(28.dp))
-            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(c.surfaceContainer).padding(18.dp)) {
+            Box(Modifier.fillMaxWidth().bubbleGlassSurface(RoundedCornerShape(24.dp)).padding(18.dp)) {
                 AppearanceSettings()
             }
             Spacer(Modifier.height(12.dp))
-            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(c.surfaceContainer).padding(18.dp)) {
+            Box(Modifier.fillMaxWidth().bubbleGlassSurface(RoundedCornerShape(24.dp)).padding(18.dp)) {
                 SponsorBlockSettings()
             }
         }

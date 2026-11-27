@@ -270,8 +270,8 @@ class CommentsState(private val scope: CoroutineScope) {
 @Composable
 fun CommentsCard(state: CommentsState, onOpen: () -> Unit, live: Boolean = false) {
     val c = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(16.dp)
-    val darkGlass = isDarkTheme() && ThemeSettings.mode != "amoled"
+    val shape = RoundedCornerShape(24.dp)
+    val darkGlass = isDarkTheme()
     val first = state.comments.firstOrNull()
     Column(
         modifier = Modifier
@@ -283,7 +283,7 @@ fun CommentsCard(state: CommentsState, onOpen: () -> Unit, live: Boolean = false
                 onClick = onOpen,
             )
             .then(
-                if (darkGlass) Modifier.glassmorphicSurface(shape)
+                if (darkGlass) Modifier.bubbleGlassSurface(shape)
                 else Modifier.clip(shape).background(c.surfaceContainerLow).metallicBorder(shape)
             )
             .padding(horizontal = 12.dp, vertical = 8.dp),
@@ -416,17 +416,14 @@ fun CommentsPanel(
                 }
             }
         }
-        val shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        val shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
         Column(
             Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .height(with(density) { height.value.toDp() })
                 .graphicsLayer { translationY = slide.value * size.height }
-                .shadow(16.dp, shape, ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
-                .clip(shape)
-                .background(c.surfaceContainerLow)
-
+                .bubbleGlassSurface(shape)
                 .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }
                 .imePadding(),
         ) {
@@ -480,10 +477,10 @@ fun CommentsPanel(
             if (Account.signedIn) Composer(state) else Text(
                 I18n.t("sign_in_to_comment", "Sign in to comment."),
                 color = c.onSurfaceVariant, fontSize = 13.sp,
-                modifier = Modifier.fillMaxWidth().background(c.surfaceContainer).padding(horizontal = 20.dp, vertical = 14.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
             )
 
-            Spacer(Modifier.fillMaxWidth().background(if (Account.signedIn) c.surfaceContainer else c.surfaceContainer).windowInsetsBottomHeight(WindowInsets.navigationBars))
+            Spacer(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars))
         }
     }
 }
@@ -506,7 +503,7 @@ private fun Composer(state: CommentsState) {
     }
 
     LaunchedEffect(state.replyingTo) { if (state.replyingTo != null) runCatching { requester.requestFocus() } }
-    Column(Modifier.fillMaxWidth().background(c.surfaceContainer).padding(horizontal = 12.dp, vertical = 10.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
         state.replyingTo?.let { target ->
             Row(Modifier.padding(start = 8.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("${I18n.t("replying_to", "Replying to")} ${target.displayName()}", color = c.onSurfaceVariant, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
@@ -518,7 +515,7 @@ private fun Composer(state: CommentsState) {
         state.postError?.let { Text(it, color = c.error, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp, bottom = 6.dp)) }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.weight(1f).clip(RoundedCornerShape(24.dp)).background(c.surfaceContainerHighest)
+                Modifier.weight(1f).bubbleGlassSurface(RoundedCornerShape(24.dp))
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
                 if (state.draft.isEmpty()) {

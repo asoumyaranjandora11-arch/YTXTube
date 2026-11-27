@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.tensei.ytxtube
 
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -70,6 +72,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed as staggeredItemsIndexed
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -316,6 +323,9 @@ fun PlayerScreen(
 
             .then(if (interactive) Modifier.pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } } else Modifier),
     ) {
+        if (isDark && state.expanded) {
+            AmbientGlowBackground(Modifier.fillMaxSize())
+        }
         ActionMessage(state, Modifier.align(Alignment.BottomCenter).zIndex(1f).padding(bottom = bottom + 24.dp))
         if (state.isMusicMode) {
             val p = morph.progress.value
@@ -361,18 +371,26 @@ fun PlayerScreen(
                         .fillMaxHeight()
                 ) {
                     Spacer(Modifier.height(top))
-                    LazyColumn(
+                    LazyVerticalStaggeredGrid(
+                        columns = StaggeredGridCells.Adaptive(180.dp),
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = bottom + 32.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalItemSpacing = 10.dp,
                     ) {
-                        item(key = "wideMoreTitle") { SectionTitle("More videos") }
+                        item(key = "wideMoreTitle", span = StaggeredGridItemSpan.FullLine) { SectionTitle("More videos") }
                         val related = details?.related.orEmpty()
                         if (related.isNotEmpty()) {
-                            items(related, key = { "wide-rel-" + it.id }) { video ->
-                                Box(Modifier.padding(horizontal = 14.dp, vertical = 2.dp)) { VideoRow(video, onClick = { onOpen(video) }) }
+                            staggeredItemsIndexed(related, key = { _, video -> "wide-rel-" + video.id }) { index, video ->
+                                VideoCard(
+                                    video,
+                                    onClick = { onOpen(video) },
+                                    modifier = Modifier.animateItem(),
+                                    thumbnailAspectRatio = bentoVideoAspectRatio(index),
+                                )
                             }
                         } else if (state.loading) {
-                            item(key = "wideLoading") {
+                            item(key = "wideLoading", span = StaggeredGridItemSpan.FullLine) {
                                 Box(Modifier.fillMaxWidth().padding(top = 40.dp), Alignment.Center) {
                                     CircularProgressIndicator(color = c.primary, strokeWidth = 4.dp, modifier = Modifier.size(32.dp))
                                 }
@@ -392,7 +410,9 @@ fun PlayerScreen(
 
 
             if (!showDetails) Spacer(Modifier.weight(1f)) else
-            LazyColumn(
+            LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Adaptive(180.dp),
+                state = rememberLazyStaggeredGridState(),
                 modifier = Modifier
                     .weight(1f)
                     .zIndex(0f)
@@ -410,16 +430,25 @@ fun PlayerScreen(
                         }
                     },
                 contentPadding = PaddingValues(bottom = bottom + 32.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalItemSpacing = 12.dp,
             ) {
-                item(key = "info") { VideoDetailsBlock(state, item, details, c, descriptionOpen, { descriptionOpen = !descriptionOpen }, isLiveStream) }
+                    item(key = "info", span = StaggeredGridItemSpan.FullLine) {
+                        VideoDetailsBlock(state, item, details, c, descriptionOpen, { descriptionOpen = !descriptionOpen }, isLiveStream)
+                    }
                 val related = details?.related.orEmpty()
                 if (related.isNotEmpty()) {
-                    item(key = "moreTitle") { SectionTitle("More videos") }
-                    items(related, key = { "rel-" + it.id }) { video ->
-                        Box(Modifier.padding(horizontal = 20.dp)) { VideoRow(video, onClick = { onOpen(video) }) }
+                        item(key = "moreTitle", span = StaggeredGridItemSpan.FullLine) { SectionTitle("More videos") }
+                        staggeredItemsIndexed(related, key = { _, video -> "rel-" + video.id }) { index, video ->
+                            VideoCard(
+                                video,
+                                onClick = { onOpen(video) },
+                                modifier = Modifier.animateItem(),
+                                thumbnailAspectRatio = bentoVideoAspectRatio(index),
+                            )
                     }
                 } else if (state.loading) {
-                    item(key = "loading") {
+                        item(key = "loading", span = StaggeredGridItemSpan.FullLine) {
                         Box(Modifier.fillMaxWidth().padding(top = 40.dp), Alignment.Center) {
                             CircularProgressIndicator(color = c.primary, strokeWidth = 4.dp, modifier = Modifier.size(32.dp))
                         }
@@ -1980,13 +2009,13 @@ private fun VideoDetailsBlock(
             details?.likes?.takeIf { it > 0 }?.let { "${formatCount(it)} likes" },
         ).joinToString(" · ")
         val hasDescription = !details?.description.isNullOrBlank()
-        val metadataShape = RoundedCornerShape(16.dp)
+        val metadataShape = RoundedCornerShape(24.dp)
         Column(
             Modifier
                 .fillMaxWidth()
                 .then(
-                    if (isDarkTheme() && ThemeSettings.mode != "amoled") {
-                        Modifier.glassmorphicSurface(metadataShape)
+                    if (isDarkTheme()) {
+                        Modifier.bubbleGlassSurface(metadataShape)
                     } else {
                         Modifier.clip(metadataShape)
                             .background(c.surfaceContainerHigh)
@@ -2031,13 +2060,13 @@ private fun VideoDetailsBlock(
             }
         }
         Spacer(Modifier.height(12.dp))
-        val channelShape = RoundedCornerShape(16.dp)
+        val channelShape = RoundedCornerShape(24.dp)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .then(
-                    if (isDarkTheme() && ThemeSettings.mode != "amoled") {
-                        Modifier.glassmorphicSurface(channelShape)
+                    if (isDarkTheme()) {
+                        Modifier.bubbleGlassSurface(channelShape)
                     } else {
                         Modifier.clip(channelShape)
                             .background(c.surfaceContainerHigh)

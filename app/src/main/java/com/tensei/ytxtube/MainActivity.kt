@@ -53,6 +53,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.gestures.Orientation
@@ -511,7 +512,13 @@ fun YtxTubeApp() {
         derivedStateOf { player.current != null && (player.expanded || morph.dragging || morph.progress.isRunning || morph.progress.value > 0f) }
     }
 
-    BoxWithConstraints(Modifier.fillMaxSize().appScreenBackground()) {
+    val darkTheme = isDarkTheme()
+    BoxWithConstraints(
+        Modifier.fillMaxSize().background(
+            if (darkTheme) Color(0xFF08090D) else c.surface,
+        ),
+    ) {
+        if (darkTheme) AmbientGlowBackground(Modifier.matchParentSize())
 
         val stageAspect = player.stageAspect
         val stageTopPx = with(density) {
@@ -584,7 +591,6 @@ fun YtxTubeApp() {
             Modifier
                 .fillMaxSize()
                 .layerBackdrop(pageBackdrop)
-                .appScreenBackground()
                 .graphicsLayer {
                     rotationY = appFlipRotation.value
                     cameraDistance = 16f

@@ -5,13 +5,29 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.matchParentSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.shadow
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -42,23 +58,120 @@ object GlassmorphicTheme {
     val borderBrush = Brush.linearGradient(listOf(goldStart, goldMid, goldStart))
 }
 
+@Composable
+fun AmbientGlowBackground(modifier: Modifier = Modifier) {
+    Box(modifier.background(Color(0xFF08090D))) {
+        Box(
+            Modifier
+                .matchParentSize()
+                .drawBehind {
+                    val radius = maxOf(size.width, size.height) * 0.78f
+                    drawRect(
+                        Brush.radialGradient(
+                            colors = listOf(Color(0x33D4AF37), Color.Transparent),
+                            center = Offset(size.width * 0.16f, size.height * 0.18f),
+                            radius = radius,
+                        ),
+                    )
+                    drawRect(
+                        Brush.radialGradient(
+                            colors = listOf(Color(0x331E3A8A), Color.Transparent),
+                            center = Offset(size.width * 0.88f, size.height * 0.40f),
+                            radius = radius,
+                        ),
+                    )
+                    drawRect(
+                        Brush.radialGradient(
+                            colors = listOf(Color(0x334C1D95), Color.Transparent),
+                            center = Offset(size.width * 0.48f, size.height * 0.92f),
+                            radius = radius,
+                        ),
+                    )
+                }
+                .blur(96.dp),
+        )
+    }
+}
+
 fun Modifier.glassmorphicBackground(): Modifier = drawBehind {
+    drawRect(Color(0xFF08090D))
+    val radius = maxOf(size.width, size.height) * 0.78f
     drawRect(
-        Brush.verticalGradient(
-            colors = listOf(
-                GlassmorphicTheme.backgroundStart,
-                GlassmorphicTheme.backgroundMiddle,
-                GlassmorphicTheme.backgroundEnd,
-            ),
+        Brush.radialGradient(
+            colors = listOf(Color(0x33D4AF37), Color.Transparent),
+            center = Offset(size.width * 0.16f, size.height * 0.18f),
+            radius = radius,
         ),
     )
     drawRect(
         Brush.radialGradient(
-            colors = listOf(GlassmorphicTheme.backgroundEnd.copy(alpha = 0.62f), Color.Transparent),
-            center = Offset(size.width * 0.72f, size.height * 0.24f),
-            radius = maxOf(size.width, size.height) * 0.92f,
+            colors = listOf(Color(0x331E3A8A), Color.Transparent),
+            center = Offset(size.width * 0.88f, size.height * 0.40f),
+            radius = radius,
         ),
     )
+    drawRect(
+        Brush.radialGradient(
+            colors = listOf(Color(0x334C1D95), Color.Transparent),
+            center = Offset(size.width * 0.48f, size.height * 0.92f),
+            radius = radius,
+        ),
+    )
+}
+
+fun Modifier.bubbleGlassSurface(
+    shape: Shape = RoundedCornerShape(24.dp),
+): Modifier = shadow(
+    elevation = 8.dp,
+    shape = shape,
+    clip = false,
+    ambientColor = Color.Black.copy(alpha = 0.28f),
+    spotColor = Color.Black.copy(alpha = 0.38f),
+).clip(shape)
+    .background(Color(0xFF101116).copy(alpha = 0.6f))
+    .drawBehind {
+        drawRect(
+            Brush.verticalGradient(
+                0f to Color.White.copy(alpha = 0.11f),
+                0.24f to GlassmorphicTheme.goldStart.copy(alpha = 0.045f),
+                0.62f to Color.Transparent,
+                1f to Color.Transparent,
+            ),
+        )
+    }
+    .metallicBorder(shape)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GlassModalBottomSheet(
+    onDismissRequest: () -> Unit,
+    sheetState: SheetState? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState ?: rememberModalBottomSheetState(),
+        shape = RoundedCornerShape(24.dp),
+        containerColor = Color.Transparent,
+        contentColor = Color.White,
+        dragHandle = null,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .bubbleGlassSurface(RoundedCornerShape(24.dp)),
+        ) {
+            Box(
+                Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(top = 10.dp, bottom = 8.dp)
+                    .size(width = 38.dp, height = 4.dp)
+                    .clip(CircleShape)
+                    .background(GlassmorphicTheme.borderBrush),
+            )
+            content()
+        }
+    }
 }
 
 fun Modifier.metallicBorder(
@@ -87,8 +200,8 @@ fun Modifier.glassmorphicSurface(
 
 @Composable
 fun Modifier.appScreenBackground(): Modifier =
-    if (isDarkTheme() && ThemeSettings.mode != "amoled") {
-        glassmorphicBackground()
+    if (isDarkTheme()) {
+        this
     } else {
         background(MaterialTheme.colorScheme.surface)
     }

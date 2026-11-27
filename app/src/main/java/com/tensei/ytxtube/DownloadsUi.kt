@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.tensei.ytxtube
 
 import android.widget.Toast
@@ -11,13 +13,16 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed as staggeredItemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -49,6 +54,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -76,10 +83,9 @@ fun DownloadQualitySheet(video: VideoItem, onDownloadStarted: ((String) -> Unit)
             .onFailure { error = it.message ?: "Could not load the available qualities" }
     }
 
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = c.surfaceContainerLow,
     ) {
         Column(
             modifier = Modifier
@@ -183,8 +189,7 @@ private fun QualityChoiceRow(option: DownloadOption, selected: Boolean, onClick:
         modifier = Modifier
             .fillMaxWidth()
             .pressable(pressedScale = 0.98f, onClick = onClick)
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (selected) c.primaryContainer.copy(alpha = 0.55f) else c.surfaceContainerHigh.copy(alpha = 0.35f))
+            .bubbleGlassSurface(RoundedCornerShape(24.dp))
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -232,23 +237,26 @@ fun DownloadsScreen(
     val videos = tasks.filter { it.height > 0 }
     val music = tasks.filter { it.height == 0 }
     val shown = if (section == 0) videos else music
+    Box(Modifier.fillMaxSize().appScreenBackground()) {
     CollapsingHeaderLayout(
         resetKey = scrollToTop to listOf(tasks.size, tasks.count { it.status == DownloadStatus.Complete }),
         header = { ScreenHeader(title = "Downloads") { HeaderActions(onSearch, onAccount) } },
     ) { top ->
-        LazyColumn(contentPadding = contentPadding.withTop(top)) {
-            item(key = "sections") {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    DownloadSectionPill("Videos", videos.size, section == 0) { section = 0 }
-                    DownloadSectionPill("Music", music.size, section == 1) { section = 1 }
+        LazyVerticalStaggeredGrid(
+            columns = StaggeredGridCells.Adaptive(180.dp),
+            contentPadding = contentPadding.withTop(top),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalItemSpacing = 12.dp,
+        ) {
+            item(key = "sections", span = StaggeredGridItemSpan.FullLine) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    DownloadSectionPill("Videos", videos.size, section == 0, Modifier.weight(1f)) { section = 0 }
+                    DownloadSectionPill("Music", music.size, section == 1, Modifier.weight(1f)) { section = 1 }
                 }
             }
             if (shown.isEmpty()) {
-                item(key = "empty") {
-                    Box(Modifier.fillMaxWidth().padding(top = 28.dp)) {
+                item(key = "empty", span = StaggeredGridItemSpan.FullLine) {
+                    Box(Modifier.fillMaxWidth().padding(top = 28.dp), contentAlignment = Alignment.Center) {
                         EmptyState(
                             icon = if (section == 0) Icons.Rounded.Download else Icons.Rounded.MusicNote,
                             title = if (section == 0) "No videos downloaded yet" else "No music downloaded yet",
@@ -270,43 +278,55 @@ fun DownloadsScreen(
                 val active = shown.filter { it.status != DownloadStatus.Complete }
                 val finished = shown.filter { it.status == DownloadStatus.Complete }
                 if (active.isNotEmpty()) {
-                    item(key = "activeTitle") { SectionTitle("Downloading") }
-                    items(active, key = { "a-" + it.key }) { task ->
-                        DownloadRow(task, onOpen = null)
+                    item(key = "activeTitle", span = StaggeredGridItemSpan.FullLine) { SectionTitle("Downloading") }
+                    staggeredItemsIndexed(active, key = { _, task -> "a-" + task.key }) { index, task ->
+                        DownloadRow(
+                            task,
+                            onOpen = null,
+                            thumbnailAspectRatio = bentoVideoAspectRatio(index),
+                            modifier = Modifier.animateItem(),
+                        )
                     }
                 }
                 if (finished.isNotEmpty()) {
-                    item(key = "doneTitle") { SectionTitle(if (section == 0) "Videos" else "Music") }
-                    items(finished, key = { "d-" + it.key }) { task ->
+                    item(key = "doneTitle", span = StaggeredGridItemSpan.FullLine) { SectionTitle(if (section == 0) "Videos" else "Music") }
+                    staggeredItemsIndexed(finished, key = { _, task -> "d-" + task.key }) { index, task ->
                         DownloadRow(
                             task,
+                            thumbnailAspectRatio = bentoVideoAspectRatio(active.size + index),
+                            modifier = Modifier.animateItem(),
                             onOpen = {
                                 if (section == 0) onOpen(task.toVideoItem())
                                 else onOpenMusic(task.toVideoItem())
                             },
                         )
                     }
-                    item(key = "footer") { Spacer(Modifier.height(20.dp)) }
+                    item(key = "footer", span = StaggeredGridItemSpan.FullLine) { Spacer(Modifier.height(20.dp)) }
                 }
+            }
             }
         }
     }
 }
 
 @Composable
-private fun DownloadSectionPill(label: String, count: Int, selected: Boolean, onClick: () -> Unit) {
-    val c = MaterialTheme.colorScheme
+private fun DownloadSectionPill(
+    label: String,
+    count: Int,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
     Row(
-        Modifier
-            .clip(CircleShape)
-            .background(if (selected) c.primary else c.surfaceContainerHigh)
+        modifier
+            .bubbleGlassSurface(RoundedCornerShape(24.dp))
             .pressable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             label,
-            color = if (selected) c.onPrimary else c.onSurface,
+            color = if (selected) GlassmorphicTheme.goldStart else Color.White,
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
         )
@@ -314,7 +334,7 @@ private fun DownloadSectionPill(label: String, count: Int, selected: Boolean, on
             Spacer(Modifier.width(6.dp))
             Text(
                 count.toString(),
-                color = if (selected) c.onPrimary.copy(alpha = 0.8f) else c.onSurfaceVariant,
+                color = Color.White.copy(alpha = 0.72f),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -323,72 +343,76 @@ private fun DownloadSectionPill(label: String, count: Int, selected: Boolean, on
 }
 
 @Composable
-private fun DownloadRow(task: DownloadTask, onOpen: (() -> Unit)?) {
+private fun DownloadRow(
+    task: DownloadTask,
+    onOpen: (() -> Unit)?,
+    thumbnailAspectRatio: Float,
+    modifier: Modifier = Modifier,
+) {
     val c = MaterialTheme.colorScheme
     var menu by remember(task.key) { mutableStateOf(false) }
     val running = task.status == DownloadStatus.Downloading || task.status == DownloadStatus.Queued ||
         task.status == DownloadStatus.Processing
+    val compactLayout = thumbnailAspectRatio <= 1f
 
     Column(
-        Modifier
+        modifier
             .fillMaxWidth()
+            .padding(4.dp)
+            .bubbleGlassSurface(RoundedCornerShape(24.dp))
             .pressable(enabled = onOpen != null, pressedScale = 0.985f) { onOpen?.invoke() }
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(12.dp),
     ) {
-        Row(verticalAlignment = Alignment.Top) {
-            Box {
-                Thumbnail(
-                    task.thumbnail,
-                    Modifier.size(width = 132.dp, height = 74.dp),
-                    radius = 12,
-                    videoId = task.videoId,
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(thumbnailAspectRatio)
+                .clip(RoundedCornerShape(16.dp)),
+        ) {
+            Thumbnail(task.thumbnail, Modifier.fillMaxSize(), radius = 0, videoId = task.videoId)
+            if (compactLayout) {
+                Box(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(96.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                0f to Color.Transparent,
+                                0.35f to Color.Black.copy(alpha = 0.48f),
+                                1f to Color.Black.copy(alpha = 0.88f),
+                            ),
+                        ),
                 )
-                DurationPill(task.durationSec, Modifier.align(Alignment.BottomEnd).padding(5.dp), small = true)
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
                 Text(
                     task.title,
+                    color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    lineHeight = 18.sp,
+                    fontSize = 13.sp,
+                    lineHeight = 16.sp,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(3.dp))
-                Text(
-                    if (task.height > 0) {
-                        "${task.channel} · ${task.height}p${if (task.hdr) " HDR" else ""}"
-                    } else {
-                        "${task.channel} · Audio"
-                    },
-                    color = c.onSurfaceVariant,
-                    fontSize = 11.5.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    statusText(task),
-                    color = if (task.status == DownloadStatus.Failed) c.error else c.onSurfaceVariant,
-                    fontSize = 11.5.sp,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(10.dp),
                 )
             }
-            Box {
+            DurationPill(
+                task.durationSec,
+                Modifier.align(if (compactLayout) Alignment.TopStart else Alignment.BottomEnd).padding(6.dp),
+                small = true,
+            )
+            Box(Modifier.align(Alignment.TopEnd)) {
                 Box(
                     Modifier
                         .size(34.dp)
                         .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.5f))
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                         ) { menu = true },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Rounded.MoreVert, "More options", tint = c.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Rounded.MoreVert, "More options", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     when (task.status) {
@@ -413,20 +437,53 @@ private fun DownloadRow(task: DownloadTask, onOpen: (() -> Unit)?) {
             }
         }
 
+        if (!compactLayout) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                task.title,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            if (task.height > 0) {
+                "${task.channel} · ${task.height}p${if (task.hdr) " HDR" else ""}"
+            } else {
+                "${task.channel} · Audio"
+            },
+            color = Color.White.copy(alpha = 0.72f),
+            fontSize = 11.5.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            statusText(task),
+            color = if (task.status == DownloadStatus.Failed) c.error else Color.White.copy(alpha = 0.76f),
+            fontSize = 11.5.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
         if (running || task.status == DownloadStatus.Paused || task.status == DownloadStatus.Failed) {
             Spacer(Modifier.height(8.dp))
             LinearProgressIndicator(
                 progress = { task.progress },
                 modifier = Modifier.fillMaxWidth().height(3.dp).clip(CircleShape),
                 color = if (task.status == DownloadStatus.Failed) c.error else c.primary,
-                trackColor = c.onSurfaceVariant.copy(alpha = 0.18f),
+                trackColor = Color.White.copy(alpha = 0.18f),
                 drawStopIndicator = {},
             )
             Spacer(Modifier.height(4.dp))
             Row(Modifier.fillMaxWidth()) {
                 Text(
                     progressText(task),
-                    color = c.onSurfaceVariant,
+                    color = Color.White.copy(alpha = 0.72f),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                 )
@@ -440,7 +497,7 @@ private fun DownloadRow(task: DownloadTask, onOpen: (() -> Unit)?) {
                         DownloadStatus.Failed -> "Failed"
                         DownloadStatus.Complete -> "Downloaded"
                     },
-                    color = c.onSurfaceVariant,
+                    color = Color.White.copy(alpha = 0.72f),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                 )

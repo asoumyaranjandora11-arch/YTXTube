@@ -12,7 +12,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -48,6 +47,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -56,6 +57,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
@@ -153,19 +155,10 @@ fun LiquidBottomTabs(
     isDarkSurface: Boolean = false,
     content: @Composable RowScope.() -> Unit
 ) {
-    val isLightTheme = !isDarkSurface && !isSystemInDarkTheme() && ThemeSettings.mode != "dark" && ThemeSettings.mode != "amoled"
-    val isAmoled = ThemeSettings.mode == "amoled"
-    val accentColor =
-        if (isLightTheme) Color(0xFF0088FF)
-        else GlassmorphicTheme.goldStart
+    val accentColor = GlassmorphicTheme.goldStart
     val glassSupported = GlassQuality.effectsSupported
-    val solidContainer = if (isAmoled) Color.Black else Color(0xFF1A1A24)
-    val containerColor = when {
-        !glassSupported -> solidContainer
-        isAmoled -> Color(0xFF000000).copy(0.45f)
-        isLightTheme -> Color(0xFFFAFAFA).copy(0.4f)
-        else -> GlassmorphicTheme.surface
-    }
+    val containerColor = Color(0xFF17171D).copy(alpha = 0.6f)
+    val dockShape = RoundedCornerShape(24.dp)
 
     val tabsBackdrop = rememberLayerBackdrop()
 
@@ -270,11 +263,18 @@ fun LiquidBottomTabs(
                 .graphicsLayer {
                     translationX = panelOffset
                 }
+                .shadow(
+                    elevation = 12.dp,
+                    shape = dockShape,
+                    clip = false,
+                    ambientColor = Color.Black.copy(alpha = 0.28f),
+                    spotColor = Color.Black.copy(alpha = 0.38f),
+                )
                 .then(
                     if (glassSupported) {
                         Modifier.drawBackdrop(
                             backdrop = backdrop,
-                            shape = { Capsule() },
+                            shape = { dockShape },
                             effects = {
                                 vibrancy()
                                 blur(8f.dp.toPx())
@@ -290,14 +290,26 @@ fun LiquidBottomTabs(
                         )
                     } else {
                         Modifier
-                            .clip(Capsule())
+                            .clip(dockShape)
                             .background(containerColor)
                     }
                 )
+                .clip(dockShape)
+                .drawWithContent {
+                    drawContent()
+                    drawRect(
+                        Brush.verticalGradient(
+                            0f to Color.White.copy(alpha = 0.10f),
+                            0.24f to GlassmorphicTheme.goldStart.copy(alpha = 0.04f),
+                            0.62f to Color.Transparent,
+                            1f to Color.Transparent,
+                        ),
+                    )
+                }
                 .then(interactiveHighlight.modifier)
                 .height(64f.dp)
                 .fillMaxWidth()
-                .border(1.dp, GlassmorphicTheme.borderBrush, Capsule())
+                .border(1.dp, GlassmorphicTheme.borderBrush, dockShape)
         )
 
         // 2. Moving active tab indicator pill. It stays *behind* the tab row so
@@ -353,8 +365,7 @@ fun LiquidBottomTabs(
                             onDrawSurface = {
                                 val progress = dampedDragAnimation.pressProgress
                                 drawRect(
-                                    if (isLightTheme) Color.Black.copy(0.12f)
-                                    else accentColor.copy(alpha = 0.16f),
+                                    accentColor.copy(alpha = 0.16f),
                                     alpha = 1f - progress
                                 )
                                 drawRect(Color.Black.copy(alpha = 0.03f * progress))
@@ -423,9 +434,8 @@ fun RowScope.LiquidNavTab(
     isDarkSurface: Boolean = false,
     onClick: () -> Unit
 ) {
-    val isLightTheme = !isDarkSurface && !isSystemInDarkTheme() && ThemeSettings.mode != "dark" && ThemeSettings.mode != "amoled"
-    val contentColor = if (isLightTheme) Color.Black else Color.White
-    val accentColor = if (isLightTheme) Color(0xFF0088FF) else GlassmorphicTheme.goldStart
+    val contentColor = Color.White
+    val accentColor = GlassmorphicTheme.goldStart
     val active = tab == Tab.Downloads && Downloads.busy
 
     LiquidBottomTab(onClick = onClick) {

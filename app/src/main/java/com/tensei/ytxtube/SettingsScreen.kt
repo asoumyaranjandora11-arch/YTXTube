@@ -382,9 +382,12 @@ fun SettingsScreen(
                         .padding(horizontal = 24.dp)
                         .widthIn(max = 350.dp)
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(c.surfaceContainerHighest)
-                        .border(1.dp, c.onSurface.copy(alpha = 0.12f), RoundedCornerShape(24.dp))
+                        .then(
+                            if (isDarkTheme()) Modifier.bubbleGlassSurface(RoundedCornerShape(24.dp))
+                            else Modifier.clip(RoundedCornerShape(24.dp))
+                                .background(c.surfaceContainerHighest)
+                                .metallicBorder(RoundedCornerShape(24.dp)),
+                        )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
@@ -480,9 +483,12 @@ fun SettingsScreen(
                         .padding(horizontal = 24.dp)
                         .widthIn(max = 350.dp)
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(c.surfaceContainerHighest)
-                        .border(1.dp, c.onSurface.copy(alpha = 0.12f), RoundedCornerShape(24.dp))
+                        .then(
+                            if (isDarkTheme()) Modifier.bubbleGlassSurface(RoundedCornerShape(24.dp))
+                            else Modifier.clip(RoundedCornerShape(24.dp))
+                                .background(c.surfaceContainerHighest)
+                                .metallicBorder(RoundedCornerShape(24.dp)),
+                        )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
@@ -587,12 +593,12 @@ private fun SettingsCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (isDarkTheme() && ThemeSettings.mode != "amoled") {
-                Modifier.glassmorphicSurface(RoundedCornerShape(18.dp), GlassmorphicTheme.surface)
+            .then(if (isDarkTheme()) {
+                Modifier.bubbleGlassSurface(RoundedCornerShape(24.dp))
             } else {
-                Modifier.clip(RoundedCornerShape(18.dp))
+                Modifier.clip(RoundedCornerShape(24.dp))
                     .background(c.surfaceContainerHigh)
-                    .metallicBorder(RoundedCornerShape(18.dp))
+                    .metallicBorder(RoundedCornerShape(24.dp))
             }),
         content = content,
     )
@@ -684,9 +690,12 @@ private fun SettingsFloatingDialog(
                 .padding(horizontal = 16.dp, vertical = 20.dp)
                 .widthIn(max = 410.dp)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(c.surfaceContainerHighest)
-                .border(1.dp, c.onSurface.copy(alpha = 0.12f), RoundedCornerShape(24.dp))
+                .then(
+                    if (isDarkTheme()) Modifier.bubbleGlassSurface(RoundedCornerShape(24.dp))
+                    else Modifier.clip(RoundedCornerShape(24.dp))
+                        .background(c.surfaceContainerHighest)
+                        .metallicBorder(RoundedCornerShape(24.dp)),
+                )
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -963,11 +972,16 @@ private fun QualitySelectionDialog(
     Dialog(onDismissRequest = onDismiss) {
         Card(
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = c.surfaceContainer),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isDarkTheme()) Color.Transparent else c.surfaceContainer,
+            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
-                .metallicBorder(RoundedCornerShape(24.dp)),
+                .then(
+                    if (isDarkTheme()) Modifier.bubbleGlassSurface(RoundedCornerShape(24.dp))
+                    else Modifier.metallicBorder(RoundedCornerShape(24.dp)),
+                ),
         ) {
             Column(
                 modifier = Modifier
@@ -1115,11 +1129,16 @@ private fun DownloadFolderSelectionDialog(
     Dialog(onDismissRequest = onDismiss) {
         Card(
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = c.surfaceContainer),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isDarkTheme()) Color.Transparent else c.surfaceContainer,
+            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
-                .metallicBorder(RoundedCornerShape(24.dp)),
+                .then(
+                    if (isDarkTheme()) Modifier.bubbleGlassSurface(RoundedCornerShape(24.dp))
+                    else Modifier.metallicBorder(RoundedCornerShape(24.dp)),
+                ),
         ) {
             Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
                 Text(
@@ -1915,16 +1934,17 @@ private fun SettingsProfileCard(
     val activeId = Account.activeAccountId
     var expanded by remember { mutableStateOf(false) }
 
+    val profileShape = RoundedCornerShape(24.dp)
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .then(
-                if (isDarkTheme() && ThemeSettings.mode != "amoled") {
-                    Modifier.glassmorphicSurface(RoundedCornerShape(18.dp))
+                if (isDarkTheme()) {
+                    Modifier.bubbleGlassSurface(profileShape)
                 } else {
-                    Modifier.clip(RoundedCornerShape(18.dp))
+                    Modifier.clip(profileShape)
                         .background(c.surfaceContainerHigh)
-                        .metallicBorder(RoundedCornerShape(18.dp))
+                        .metallicBorder(profileShape)
                 }
             )
             .padding(vertical = 2.dp)

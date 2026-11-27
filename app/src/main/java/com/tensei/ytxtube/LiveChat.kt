@@ -443,10 +443,9 @@ fun LiveChatPanel(
     LaunchedEffect(state.messages.size) {
         if (state.messages.isNotEmpty()) runCatching { list.animateScrollToItem(state.messages.lastIndex) }
     }
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onClose,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = c.surfaceContainerLow,
     ) {
         Column(
             Modifier
@@ -530,8 +529,7 @@ fun LiveChatPanel(
                     Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(c.surfaceContainer)
+                        .bubbleGlassSurface(RoundedCornerShape(24.dp))
                         .pressable { onSignIn() }
                         .padding(horizontal = 16.dp, vertical = 13.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -576,8 +574,7 @@ private fun LiveChatComposer(state: LiveChatState) {
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(22.dp))
-            .background(c.surfaceContainer)
+            .bubbleGlassSurface(RoundedCornerShape(24.dp))
             .padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

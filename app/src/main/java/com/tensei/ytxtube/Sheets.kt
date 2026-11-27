@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.tensei.ytxtube
 
 import android.content.Intent
@@ -9,14 +11,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -50,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import kotlinx.coroutines.Dispatchers
@@ -67,10 +72,9 @@ import androidx.compose.ui.unit.sp
 fun VideoOptionsSheet(video: VideoItem, player: PlayerState, onDismiss: () -> Unit) {
     val c = MaterialTheme.colorScheme
     val context = LocalContext.current
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = c.surfaceContainerLow,
     ) {
         Row(Modifier.padding(horizontal = 20.dp).padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Thumbnail(video.thumbnail, Modifier.width(112.dp).aspectRatio(16f / 9f), radius = 14)
@@ -101,7 +105,12 @@ fun VideoOptionsSheet(video: VideoItem, player: PlayerState, onDismiss: () -> Un
 private fun OptionRow(icon: ImageVector, label: String, onClick: () -> Unit) {
     val c = MaterialTheme.colorScheme
     Row(
-        Modifier.fillMaxWidth().pressable(pressedScale = 0.98f, onClick = onClick).padding(horizontal = 24.dp, vertical = 15.dp),
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .bubbleGlassSurface(RoundedCornerShape(24.dp))
+            .pressable(pressedScale = 0.98f, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, null, tint = c.onSurface)
@@ -115,15 +124,13 @@ private fun OptionRow(icon: ImageVector, label: String, onClick: () -> Unit) {
 
 @Composable
 fun QueueCard(player: PlayerState, onOpen: () -> Unit) {
-    val c = MaterialTheme.colorScheme
     val next = player.queue.firstOrNull() ?: return
     Row(
         Modifier
             .padding(top = 16.dp)
             .fillMaxWidth()
             .pressable(pressedScale = 0.98f, onClick = onOpen)
-            .clip(RoundedCornerShape(24.dp))
-            .background(c.secondaryContainer)
+            .bubbleGlassSurface(RoundedCornerShape(24.dp))
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -132,11 +139,11 @@ fun QueueCard(player: PlayerState, onOpen: () -> Unit) {
         Column(Modifier.weight(1f)) {
             Text(
                 "Queue · ${player.queue.size}",
-                color = c.onSecondaryContainer, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp,
+                color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp,
             )
-            Text(next.title, color = c.onSecondaryContainer, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(next.title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Icon(Icons.AutoMirrored.Rounded.QueueMusic, null, tint = c.onSecondaryContainer)
+        Icon(Icons.AutoMirrored.Rounded.QueueMusic, null, tint = Color.White)
     }
 }
 
@@ -144,7 +151,7 @@ fun QueueCard(player: PlayerState, onOpen: () -> Unit) {
 @Composable
 fun QueueSheet(player: PlayerState, onDismiss: () -> Unit) {
     val c = MaterialTheme.colorScheme
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = c.surfaceContainerLow) {
+    GlassModalBottomSheet(onDismissRequest = onDismiss) {
         Row(Modifier.padding(horizontal = 20.dp).padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Queue", fontFamily = RoundedHeavy, fontWeight = FontWeight.ExtraBold, fontSize = 21.sp, modifier = Modifier.weight(1f))
             if (player.queue.isNotEmpty()) {
@@ -161,19 +168,107 @@ fun QueueSheet(player: PlayerState, onDismiss: () -> Unit) {
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
             )
         } else {
-            LazyColumn(Modifier.fillMaxHeight(0.7f)) {
+            LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Adaptive(180.dp),
+                modifier = Modifier.fillMaxHeight(0.7f).padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalItemSpacing = 10.dp,
+            ) {
                 itemsIndexed(player.queue, key = { i, v -> "$i-${v.id}" }) { index, video ->
-                    Box(Modifier.padding(horizontal = 20.dp)) {
-                        VideoRow(video, onClick = { player.playFromQueue(index); onDismiss() }) {
-                            Box(Modifier.size(40.dp).pressable { player.removeFromQueue(index) }, contentAlignment = Alignment.Center) {
-                                Icon(Icons.Rounded.Close, "Remove from queue", tint = c.onSurfaceVariant)
-                            }
-                        }
-                    }
+                    QueueVideoCard(
+                        video = video,
+                        aspectRatio = bentoVideoAspectRatio(index),
+                        modifier = Modifier.animateItem(),
+                        onClick = { player.playFromQueue(index); onDismiss() },
+                        onRemove = { player.removeFromQueue(index) },
+                    )
                 }
             }
         }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun QueueVideoCard(
+    video: VideoItem,
+    aspectRatio: Float,
+    modifier: Modifier,
+    onClick: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    val compactLayout = aspectRatio <= 1f
+    Column(
+        modifier
+            .fillMaxWidth()
+            .bubbleGlassSurface(RoundedCornerShape(24.dp))
+            .pressable(pressedScale = 0.98f, onClick = onClick)
+            .padding(10.dp),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(aspectRatio)
+                .clip(RoundedCornerShape(16.dp)),
+        ) {
+            Thumbnail(video.thumbnail, Modifier.fillMaxSize(), radius = 0, videoId = video.id)
+            if (compactLayout) {
+                Box(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(82.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                0f to Color.Transparent,
+                                1f to Color.Black.copy(alpha = 0.86f),
+                            ),
+                        ),
+                )
+                Text(
+                    video.title,
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    lineHeight = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(8.dp),
+                )
+            }
+            Box(
+                Modifier
+                    .align(Alignment.TopStart)
+                    .padding(4.dp)
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.58f))
+                    .pressable(onClick = onRemove),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Rounded.Close, "Remove from queue", tint = Color.White, modifier = Modifier.size(18.dp))
+            }
+            DurationPill(video.durationSec, Modifier.align(Alignment.BottomEnd).padding(5.dp), small = true)
+        }
+        if (!compactLayout) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                video.title,
+                color = Color.White,
+                fontSize = 13.sp,
+                lineHeight = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                video.channel,
+                color = Color.White.copy(alpha = 0.72f),
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
@@ -339,10 +434,9 @@ fun SubtitlesSheet(
         }
     }
 
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = c.surfaceContainerLow,
     ) {
         Column(
             modifier = Modifier
@@ -362,8 +456,7 @@ fun SubtitlesSheet(
                         player.setSubtitleLanguage(null)
                         onDismiss()
                     }
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(if (isOff) c.surfaceContainerHigh else Color.Transparent)
+                    .bubbleGlassSurface(RoundedCornerShape(24.dp))
                     .padding(horizontal = 12.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -403,8 +496,7 @@ fun SubtitlesSheet(
                                     player.setSubtitleLanguage(track.code, track.url)
                                     onDismiss()
                                 }
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (selected) c.surfaceContainerHigh else Color.Transparent)
+                                .bubbleGlassSurface(RoundedCornerShape(24.dp))
                                 .padding(horizontal = 12.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {

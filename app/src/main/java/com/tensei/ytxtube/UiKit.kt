@@ -354,82 +354,155 @@ fun ChannelAvatar(
 
 
 @Composable
-fun VideoCard(video: VideoItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val c = MaterialTheme.colorScheme
+fun VideoCard(
+    video: VideoItem,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    thumbnailAspectRatio: Float = 16f / 9f,
+) {
     val menu = LocalVideoMenu.current
+    val openChannel = LocalChannelOpener.current
+    val compactLayout = thumbnailAspectRatio <= 1f
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .then(
-                if (isDarkTheme() && ThemeSettings.mode != "amoled") {
-                    Modifier.glassmorphicSurface(RoundedCornerShape(16.dp))
-                } else {
-                    Modifier.clip(RoundedCornerShape(16.dp)).metallicBorder(RoundedCornerShape(16.dp))
-                }
-            )
+            .bubbleGlassSurface(RoundedCornerShape(24.dp))
             .prefetchOnPress(video.id)
             .pressable(pressedScale = 0.98f, onLongClick = { menu(video) }, onClick = onClick)
-            .padding(bottom = 16.dp),
+            .padding(bottom = if (compactLayout) 0.dp else 16.dp),
     ) {
         Box(Modifier.fillMaxWidth()) {
             Thumbnail(
                 video.thumbnail,
-                Modifier.fillMaxWidth().aspectRatio(16f / 9f),
+                Modifier.fillMaxWidth().aspectRatio(thumbnailAspectRatio),
                 radius = 0,
                 videoId = video.id,
             )
-            DurationPill(video.durationSec, Modifier.align(Alignment.BottomEnd).padding(8.dp), isLive = video.isLive)
+            if (compactLayout) {
+                Box(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(96.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                0f to Color.Transparent,
+                                0.35f to Color.Black.copy(alpha = 0.48f),
+                                1f to Color.Black.copy(alpha = 0.88f),
+                            ),
+                        ),
+                )
+            }
+            DurationPill(
+                video.durationSec,
+                modifier = if (compactLayout) {
+                    Modifier.align(Alignment.TopEnd).padding(8.dp)
+                } else {
+                    Modifier.align(Alignment.BottomEnd).padding(8.dp)
+                },
+                small = compactLayout,
+                isLive = video.isLive,
+            )
             ResumeBar(video.id, Modifier.align(Alignment.BottomStart))
+            if (compactLayout) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .padding(start = 10.dp, end = 8.dp, bottom = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.36f))
+                            .pressable(enabled = video.channelUrl != null) {
+                                video.channelUrl?.let(openChannel)
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        ChannelAvatar(video.feedAvatar(), video.channel, size = 26)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        video.title,
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                        lineHeight = 16.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.36f))
+                            .pressable(onClick = { menu(video) }),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Rounded.MoreVert,
+                            contentDescription = "Options",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+            }
         }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 12.dp, end = 4.dp, top = 12.dp),
-            verticalAlignment = Alignment.Top,
-        ) {
-            val openChannel = LocalChannelOpener.current
-            Box(Modifier.pressable(enabled = video.channelUrl != null) { video.channelUrl?.let(openChannel) }) {
-                ChannelAvatar(video.feedAvatar(), video.channel, size = 36)
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    video.title,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 15.sp,
-                    lineHeight = 20.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    metaLine(video.channel, video.views, video.uploaded, video.isLive),
-                    color = c.onSurfaceVariant,
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Box(
+        if (!compactLayout) {
+            Row(
                 modifier = Modifier
-                    .size(40.dp)
-                    .pressable(onClick = { menu(video) }),
-                contentAlignment = Alignment.Center,
+                    .fillMaxWidth()
+                    .padding(start = 12.dp, end = 4.dp, top = 12.dp),
+                verticalAlignment = Alignment.Top,
             ) {
-                Icon(
-                    Icons.Rounded.MoreVert,
-                    contentDescription = "Options",
-                    tint = c.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
-                )
+                Box(Modifier.pressable(enabled = video.channelUrl != null) { video.channelUrl?.let(openChannel) }) {
+                    ChannelAvatar(video.feedAvatar(), video.channel, size = 36)
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        video.title,
+                        color = Color.White,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 15.sp,
+                        lineHeight = 20.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        metaLine(video.channel, video.views, video.uploaded, video.isLive),
+                        color = Color.White.copy(alpha = 0.72f),
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .pressable(onClick = { menu(video) }),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.MoreVert,
+                        contentDescription = "Options",
+                        tint = Color.White.copy(alpha = 0.76f),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
         }
     }
 }
 @Composable
 fun CompactVideoCard(video: VideoItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val c = MaterialTheme.colorScheme
     val menu = LocalVideoMenu.current
     val openChannel = LocalChannelOpener.current
 
@@ -439,13 +512,7 @@ fun CompactVideoCard(video: VideoItem, onClick: () -> Unit, modifier: Modifier =
             .prefetchOnPress(video.id)
             .pressable(pressedScale = 0.98f, onLongClick = { menu(video) }, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .then(
-                if (isDarkTheme() && ThemeSettings.mode != "amoled") {
-                    Modifier.glassmorphicSurface(RoundedCornerShape(16.dp))
-                } else {
-                    Modifier.clip(RoundedCornerShape(16.dp)).metallicBorder(RoundedCornerShape(16.dp))
-                }
-            ),
+            .bubbleGlassSurface(RoundedCornerShape(24.dp)),
         verticalAlignment = Alignment.Top,
     ) {
         // बाएं तरफ छोटा थंबनेल (पहली फोटो जैसा)
@@ -474,6 +541,7 @@ fun CompactVideoCard(video: VideoItem, onClick: () -> Unit, modifier: Modifier =
         Column(Modifier.weight(1f)) {
             Text(
                 video.title,
+                color = Color.White,
                 fontWeight = FontWeight.Medium,
                 fontSize = 15.5.sp,
                 lineHeight = 21.sp,
@@ -483,7 +551,7 @@ fun CompactVideoCard(video: VideoItem, onClick: () -> Unit, modifier: Modifier =
             Spacer(Modifier.height(4.dp))
             Text(
                 metaLine(video.channel, video.views, video.uploaded, video.isLive),
-                color = c.onSurfaceVariant,
+                color = Color.White.copy(alpha = 0.72f),
                 fontSize = 12.5.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -499,7 +567,7 @@ fun CompactVideoCard(video: VideoItem, onClick: () -> Unit, modifier: Modifier =
                 Spacer(Modifier.width(8.dp))
                 Text(
                     video.channel,
-                    color = c.onSurfaceVariant,
+                    color = Color.White.copy(alpha = 0.76f),
                     fontSize = 13.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -517,7 +585,7 @@ fun CompactVideoCard(video: VideoItem, onClick: () -> Unit, modifier: Modifier =
             Icon(
                 Icons.Rounded.MoreVert,
                 contentDescription = "Options",
-                tint = c.onSurfaceVariant,
+                tint = Color.White.copy(alpha = 0.76f),
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -527,14 +595,14 @@ fun CompactVideoCard(video: VideoItem, onClick: () -> Unit, modifier: Modifier =
 
 @Composable
 fun VideoRow(video: VideoItem, onClick: () -> Unit, trailing: (@Composable () -> Unit)? = null) {
-    val c = MaterialTheme.colorScheme
     val menu = LocalVideoMenu.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .bubbleGlassSurface(RoundedCornerShape(24.dp))
             .prefetchOnPress(video.id)
             .pressable(pressedScale = 0.97f, onLongClick = { menu(video) }, onClick = onClick)
-            .padding(vertical = 6.dp),
+            .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.width(140.dp)) {
@@ -543,7 +611,7 @@ fun VideoRow(video: VideoItem, onClick: () -> Unit, trailing: (@Composable () ->
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(video.title, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(4.dp))
             val viewsLabel = if (video.isLive) {
                 video.views.takeIf { it >= 0 }?.let { "${formatCount(it)} watching" } ?: "Live"
@@ -552,7 +620,7 @@ fun VideoRow(video: VideoItem, onClick: () -> Unit, trailing: (@Composable () ->
             }
             Text(
                 listOfNotNull(video.channel.ifBlank { null }, viewsLabel).joinToString(" · "),
-                color = c.onSurfaceVariant,
+                color = Color.White.copy(alpha = 0.72f),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -727,32 +795,25 @@ fun metaLine(channel: String, views: Long, uploaded: String?, isLive: Boolean = 
 
 @Composable
 fun CommunityCard(post: CommunityPost, modifier: Modifier = Modifier) {
-    val c = MaterialTheme.colorScheme
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .then(
-                if (isDarkTheme() && ThemeSettings.mode != "amoled") {
-                    Modifier.glassmorphicSurface(RoundedCornerShape(16.dp))
-                } else {
-                    Modifier.clip(RoundedCornerShape(16.dp)).metallicBorder(RoundedCornerShape(16.dp))
-                }
-            )
+            .bubbleGlassSurface(RoundedCornerShape(24.dp))
             .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             ChannelAvatar(post.avatar, post.author, size = 36)
             Spacer(Modifier.width(10.dp))
             Column {
-                Text(post.author, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(post.author, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 post.published?.let {
-                    Text(it, color = c.onSurfaceVariant, fontSize = 12.sp)
+                    Text(it, color = Color.White.copy(alpha = 0.72f), fontSize = 12.sp)
                 }
             }
         }
         if (post.text.isNotBlank()) {
             Spacer(Modifier.height(8.dp))
-            Text(post.text, fontSize = 14.sp, lineHeight = 20.sp)
+            Text(post.text, color = Color.White, fontSize = 14.sp, lineHeight = 20.sp)
         }
         if (!post.image.isNullOrBlank()) {
             Spacer(Modifier.height(10.dp))
@@ -761,12 +822,12 @@ fun CommunityCard(post: CommunityPost, modifier: Modifier = Modifier) {
         if (post.likes != null) {
             Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.ThumbUp, contentDescription = "Likes", tint = c.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                Icon(Icons.Rounded.ThumbUp, contentDescription = "Likes", tint = Color.White.copy(alpha = 0.76f), modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(post.likes, color = c.onSurfaceVariant, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Text(post.likes, color = Color.White.copy(alpha = 0.76f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
         }
         Spacer(Modifier.height(12.dp))
-        Box(Modifier.fillMaxWidth().height(1.dp).background(c.outlineVariant.copy(alpha = 0.3f)))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.12f)))
     }
 }

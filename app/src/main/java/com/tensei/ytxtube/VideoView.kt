@@ -989,7 +989,7 @@ fun AudioOnlyStage(
 private fun TonalSkip(icon: ImageVector, description: String, enabled: Boolean, onClick: () -> Unit) {
     val c = MaterialTheme.colorScheme
     Box(
-        Modifier.size(58.dp).pressable(enabled = enabled, onClick = onClick).clip(CircleShape).background(c.surfaceContainerHigh),
+        Modifier.size(58.dp).pressable(enabled = enabled, onClick = onClick).bubbleGlassSurface(CircleShape),
         contentAlignment = Alignment.Center,
     ) { Icon(icon, description, tint = c.onSurface, modifier = Modifier.size(34.dp)) }
 }
@@ -1082,10 +1082,9 @@ fun QualitySheet(state: PlayerState, onDismiss: () -> Unit) {
     val details = state.details ?: return
     val chosen = QualityPreference.height
     val chosenHdr = QualityPreference.hdr
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = c.surfaceContainerLow,
     ) {
         Column(
             modifier = Modifier
@@ -1149,14 +1148,12 @@ private fun qualityTag(height: Int): String? = when {
 
 @Composable
 private fun QualityRow(title: String, subtitle: String?, selected: Boolean, onClick: () -> Unit) {
-    val c = MaterialTheme.colorScheme
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .pressable(pressedScale = 0.98f, onClick = onClick)
             .padding(vertical = 2.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (selected) c.primaryContainer else Color.Transparent)
+            .bubbleGlassSurface(RoundedCornerShape(24.dp))
             .padding(horizontal = 12.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1164,7 +1161,7 @@ private fun QualityRow(title: String, subtitle: String?, selected: Boolean, onCl
             title,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
             fontSize = 14.5.sp,
-            color = if (selected) c.onPrimaryContainer else c.onSurface,
+            color = if (selected) GlassmorphicTheme.goldStart else Color.White,
             modifier = Modifier.weight(1f)
         )
         if (subtitle != null) {
@@ -1172,12 +1169,12 @@ private fun QualityRow(title: String, subtitle: String?, selected: Boolean, onCl
                 subtitle,
                 fontSize = 11.5.sp,
                 fontWeight = FontWeight.Medium,
-                color = if (selected) c.onPrimaryContainer.copy(alpha = 0.8f) else c.onSurfaceVariant
+                color = Color.White.copy(alpha = 0.72f)
             )
         }
         if (selected) {
             Spacer(Modifier.width(8.dp))
-            Icon(Icons.Rounded.Check, "Selected", tint = c.onPrimaryContainer, modifier = Modifier.size(17.dp))
+            Icon(Icons.Rounded.Check, "Selected", tint = GlassmorphicTheme.goldStart, modifier = Modifier.size(17.dp))
         }
     }
 }
@@ -1193,10 +1190,10 @@ private fun QualityRow(title: String, subtitle: String?, selected: Boolean, onCl
 fun PlayerSettingsSheet(state: PlayerState, backdrop: Backdrop, onDismiss: () -> Unit) {
     val c = MaterialTheme.colorScheme
     BackHandler(onBack = onDismiss)
-    val shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
+    val shape = RoundedCornerShape(24.dp)
     val spec = glassSpec(
         shape = shape,
-        tint = glassFill(0.62f),
+        tint = Color(0xFF101116).copy(alpha = 0.6f),
         blur = 26.dp,
         refractionHeight = 18.dp,
         refractionAmount = 24.dp,
@@ -1219,6 +1216,7 @@ fun PlayerSettingsSheet(state: PlayerState, backdrop: Backdrop, onDismiss: () ->
                 .fillMaxWidth()
                 .heightIn(max = 620.dp)
                 .liquidGlass(backdrop, spec)
+                .metallicBorder(shape)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -1362,8 +1360,7 @@ private fun PlayerSettingItem(
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.pressable(pressedScale = 0.98f, onClick = onClick) else Modifier)
             .padding(vertical = 3.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(c.surfaceContainerHigh.copy(alpha = 0.5f))
+            .bubbleGlassSurface(RoundedCornerShape(24.dp))
             .padding(horizontal = 14.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1414,7 +1411,7 @@ private fun GlassButton(
                         backdrop,
                         glassSpec(
                             shape = CircleShape,
-                            tint = glassOverlayFill(0.42f),
+                            tint = glassOverlayFill(0.6f),
                             blur = 16.dp,
                             refractionHeight = 9.dp,
                             refractionAmount = 15.dp,
@@ -1423,7 +1420,8 @@ private fun GlassButton(
                 } else {
                     Modifier.background(if (tinted) Color.Black.copy(alpha = 0.38f) else Color.Transparent)
                 },
-            ),
+            )
+            .metallicBorder(CircleShape),
         contentAlignment = Alignment.Center,
     ) { Icon(icon, description, tint = Color.White, modifier = Modifier.size(iconSize)) }
 }
@@ -1782,7 +1780,7 @@ fun FullscreenPlayer(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .appScreenBackground()
     ) {
         VideoContent(
             state = state,

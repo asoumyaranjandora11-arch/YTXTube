@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.tensei.ytxtube
 
 import androidx.compose.animation.AnimatedVisibility
@@ -21,9 +23,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed as staggeredItemsIndexed
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -293,7 +297,7 @@ fun ChannelScreen(
     onMessage: (String) -> Unit,
 ) {
     val c = MaterialTheme.colorScheme
-    val list = rememberLazyListState()
+    val list = rememberLazyStaggeredGridState()
     val nearEnd by remember {
         derivedStateOf { (list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) >= list.layoutInfo.totalItemsCount - 4 }
     }
@@ -329,8 +333,14 @@ fun ChannelScreen(
             d == null -> Box(Modifier.fillMaxWidth().padding(top = top + 60.dp), Alignment.Center) {
                 CircularProgressIndicator(color = c.primary, strokeWidth = 4.dp, modifier = Modifier.size(36.dp))
             }
-            else -> LazyColumn(state = list, contentPadding = contentPadding.withTop(top)) {
-                item(key = "header") {
+            else -> LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Adaptive(180.dp),
+                state = list,
+                contentPadding = contentPadding.withTop(top),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalItemSpacing = 12.dp,
+            ) {
+                item(key = "header", span = StaggeredGridItemSpan.FullLine) {
                     AnimatedVisibility(
                         visible = true,
                         enter = fadeIn(tween(260, easing = Motion.Emphasized)) +
@@ -366,15 +376,20 @@ fun ChannelScreen(
                     }
                     }
                 }
-                item(key = "tabs") {
+                item(key = "tabs", span = StaggeredGridItemSpan.FullLine) {
                     ChannelTabStrip(selected = state.activeTab, onSelect = { state.selectTab(it) })
                 }
                 when (state.activeTab) {
                     ChannelTab.Videos -> {
-                        items(state.videos, key = { it.id }) { video ->
-                            VideoCard(video, onClick = { onOpen(video) }, modifier = Modifier.animateItem())
+                        staggeredItemsIndexed(state.videos, key = { _, video -> video.id }) { index, video ->
+                            VideoCard(
+                                video,
+                                onClick = { onOpen(video) },
+                                modifier = Modifier.animateItem(),
+                                thumbnailAspectRatio = bentoVideoAspectRatio(index),
+                            )
                         }
-                        if (state.loading || state.hasMore) item {
+                        if (state.loading || state.hasMore) item(span = StaggeredGridItemSpan.FullLine) {
                             Box(Modifier.fillMaxWidth().padding(28.dp), Alignment.Center) {
                                 CircularProgressIndicator(color = c.primary, strokeWidth = 4.dp, modifier = Modifier.size(32.dp))
                             }
@@ -382,13 +397,13 @@ fun ChannelScreen(
                     }
                     ChannelTab.Shorts -> {
                         if (state.shortsLoading && state.shorts.isEmpty()) {
-                            item {
+                            item(span = StaggeredGridItemSpan.FullLine) {
                                 Box(Modifier.fillMaxWidth().padding(48.dp), Alignment.Center) {
                                     CircularProgressIndicator(color = c.primary, strokeWidth = 4.dp, modifier = Modifier.size(32.dp))
                                 }
                             }
                         } else if (state.shorts.isEmpty()) {
-                            item {
+                            item(span = StaggeredGridItemSpan.FullLine) {
                                 EmptyState(
                                     Icons.Rounded.CloudOff,
                                     "No Shorts yet",
@@ -396,10 +411,15 @@ fun ChannelScreen(
                                 )
                             }
                         } else {
-                            items(state.shorts.chunked(3), key = { row -> row.first().id }) { row ->
-                                ShortsRow(row, onOpenShort, Modifier.animateItem())
+                            state.shorts.chunked(3).forEach { row ->
+                                item(
+                                    key = row.first().id,
+                                    span = StaggeredGridItemSpan.FullLine,
+                                ) {
+                                    ShortsRow(row, onOpenShort, Modifier.animateItem())
+                                }
                             }
-                            if (state.shortsLoading) item {
+                            if (state.shortsLoading) item(span = StaggeredGridItemSpan.FullLine) {
                                 Box(Modifier.fillMaxWidth().padding(28.dp), Alignment.Center) {
                                     CircularProgressIndicator(color = c.primary, strokeWidth = 4.dp, modifier = Modifier.size(32.dp))
                                 }
@@ -408,13 +428,13 @@ fun ChannelScreen(
                     }
                     ChannelTab.Live -> {
                         if (state.liveLoading) {
-                            item {
+                            item(span = StaggeredGridItemSpan.FullLine) {
                                 Box(Modifier.fillMaxWidth().padding(48.dp), Alignment.Center) {
                                     CircularProgressIndicator(color = c.primary, strokeWidth = 4.dp, modifier = Modifier.size(32.dp))
                                 }
                             }
                         } else if (state.liveVideos.isEmpty()) {
-                            item {
+                            item(span = StaggeredGridItemSpan.FullLine) {
                                 EmptyState(
                                     Icons.Rounded.CloudOff,
                                     "No live streams",
@@ -422,20 +442,25 @@ fun ChannelScreen(
                                 )
                             }
                         } else {
-                            items(state.liveVideos, key = { it.id }) { video ->
-                                VideoCard(video, onClick = { onOpen(video) }, modifier = Modifier.animateItem())
+                            staggeredItemsIndexed(state.liveVideos, key = { _, video -> video.id }) { index, video ->
+                                VideoCard(
+                                    video,
+                                    onClick = { onOpen(video) },
+                                    modifier = Modifier.animateItem(),
+                                    thumbnailAspectRatio = bentoVideoAspectRatio(index),
+                                )
                             }
                         }
                     }
                     ChannelTab.Community -> {
                         if (state.communityLoading) {
-                            item {
+                            item(span = StaggeredGridItemSpan.FullLine) {
                                 Box(Modifier.fillMaxWidth().padding(48.dp), Alignment.Center) {
                                     CircularProgressIndicator(color = c.primary, strokeWidth = 4.dp, modifier = Modifier.size(32.dp))
                                 }
                             }
                         } else if (state.communityPosts.isEmpty()) {
-                            item {
+                            item(span = StaggeredGridItemSpan.FullLine) {
                                 EmptyState(
                                     Icons.Rounded.CloudOff,
                                     "No community posts",
@@ -443,7 +468,11 @@ fun ChannelScreen(
                                 )
                             }
                         } else {
-                            items(state.communityPosts, key = { it.id }) { post -> CommunityCard(post) }
+                            state.communityPosts.forEach { post ->
+                                item(key = post.id, span = StaggeredGridItemSpan.FullLine) {
+                                    CommunityCard(post)
+                                }
+                            }
                         }
                     }
                 }
@@ -508,7 +537,7 @@ private fun ShortTile(video: VideoItem, modifier: Modifier, onOpen: (VideoItem) 
         modifier
             .fillMaxWidth()
             .aspectRatio(9f / 16f)
-            .clip(RoundedCornerShape(14.dp))
+            .bubbleGlassSurface(RoundedCornerShape(24.dp))
             .pressable(pressedScale = 0.95f) { onOpen(video) },
     ) {
         Thumbnail(video.thumbnail, Modifier.fillMaxSize(), radius = 0, videoId = video.id)

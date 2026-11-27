@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.tensei.ytxtube
 
 import androidx.compose.foundation.background
@@ -16,13 +18,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyGridScope
-import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridScope
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CloudOff
@@ -205,18 +207,31 @@ fun rememberScrollToTop(signal: Int): LazyListState {
     return state
 }
 @Composable
-fun rememberGridScrollToTop(signal: Int): LazyGridState {
-    val state = rememberLazyGridState()
+fun rememberStaggeredGridScrollToTop(signal: Int): LazyStaggeredGridState {
+    val state = rememberLazyStaggeredGridState()
     val initial = remember { signal }
     LaunchedEffect(signal) { if (signal != initial) state.animateScrollToItem(0) }
     return state
 }
+
+fun bentoVideoAspectRatio(index: Int): Float {
+    var mixedIndex = index
+    mixedIndex = (mixedIndex xor (mixedIndex ushr 16)) * 0x45d9f3b
+    mixedIndex = (mixedIndex xor (mixedIndex ushr 16)) * 0x45d9f3b
+    mixedIndex = mixedIndex xor (mixedIndex ushr 16)
+    return when (mixedIndex and 7) {
+        0, 3 -> 9f / 16f
+        1, 5, 7 -> 1f
+        else -> 16f / 9f
+    }
+}
+
 @Composable
 fun FeedList(
     feed: FeedState,
     contentPadding: PaddingValues,
     onOpen: (VideoItem) -> Unit,
-    header: LazyGridScope.() -> Unit = {},
+    header: LazyStaggeredGridScope.() -> Unit = {},
     scrollToTop: Int = 0,
     pullToRefresh: Boolean = true,
     indicatorTop: Dp = 0.dp,
@@ -230,7 +245,7 @@ fun FeedList(
     LaunchedEffect(listVideos, channelAvatarSeed) {
         ChannelAvatars.resolve(scope, listVideos, channelAvatarSeed)
     }
-    val list = rememberGridScrollToTop(scrollToTop)
+    val list = rememberStaggeredGridScrollToTop(scrollToTop)
 
     LaunchedEffect(feed.generation, filterScrollKey) { list.scrollToItem(0) }
     val nearEnd by remember {
@@ -242,22 +257,24 @@ fun FeedList(
     LaunchedEffect(nearEnd, listVideos.size) { if (nearEnd && listVideos.isNotEmpty()) feed.loadMore() }
     
         PullToRefresh(enabled = pullToRefresh, refreshing = feed.refreshing, onRefresh = feed::refresh, topPadding = indicatorTop) {
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(320.dp),
+        LazyVerticalStaggeredGrid(
+            columns = StaggeredGridCells.Adaptive(180.dp),
             state = list,
             contentPadding = contentPadding,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalItemSpacing = 12.dp,
         ) {
             header()
-            items(listVideos, key = { it.id }) { video ->
+            itemsIndexed(listVideos, key = { _, video -> video.id }) { index, video ->
                 VideoCard(
                     video,
                     onClick = { onOpen(video) },
                     modifier = Modifier.animateItem(),
+                    thumbnailAspectRatio = bentoVideoAspectRatio(index),
                 )
             }
             when {
-                feed.error != null && listVideos.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }) {
+                feed.error != null && listVideos.isEmpty() -> item(span = StaggeredGridItemSpan.FullLine) {
                     EmptyState(
                         icon = Icons.Rounded.CloudOff,
                         title = "Couldn't load this",
@@ -265,7 +282,7 @@ fun FeedList(
                         action = { PillButton("Try again", { feed.refresh() }) },
                     )
                 }
-                feed.loading || feed.hasMore -> item(span = { GridItemSpan(maxLineSpan) }) {
+                feed.loading || feed.hasMore -> item(span = StaggeredGridItemSpan.FullLine) {
                     Box(Modifier.fillMaxWidth().padding(28.dp), Alignment.Center) {
                         CircularProgressIndicator(color = c.primary, strokeWidth = 4.dp, modifier = Modifier.size(32.dp))
                     }

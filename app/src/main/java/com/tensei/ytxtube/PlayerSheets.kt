@@ -1,8 +1,6 @@
 package com.tensei.ytxtube
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -121,8 +119,7 @@ fun SpeedSheet(state: PlayerState, backdrop: Backdrop, onDismiss: () -> Unit) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(c.surfaceContainerHigh.copy(alpha = 0.5f))
+                .bubbleGlassSurface(RoundedCornerShape(24.dp))
                 .padding(start = 14.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -161,8 +158,7 @@ private fun SpeedStepButton(
         Modifier
             .size(40.dp)
             .pressable(pressedScale = 0.9f, onClick = onClick)
-            .clip(CircleShape)
-            .background(c.surfaceContainerHighest),
+            .bubbleGlassSurface(CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = label, tint = c.onSurface, modifier = Modifier.size(20.dp))
@@ -220,8 +216,7 @@ fun AudioTrackSheet(state: PlayerState, backdrop: Backdrop, onDismiss: () -> Uni
         Row(
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(c.surfaceContainerHigh.copy(alpha = 0.5f))
+                .bubbleGlassSurface(RoundedCornerShape(24.dp))
                 .padding(start = 14.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -263,23 +258,17 @@ private fun SpeedChip(
     onClick: () -> Unit,
 ) {
     val c = MaterialTheme.colorScheme
-    val fill by animateColorAsState(
-        targetValue = if (selected) c.secondaryContainer else c.surfaceContainerHigh.copy(alpha = 0.55f),
-        animationSpec = tween(180),
-        label = "speedChipFill",
-    )
     Column(modifier.pressable(onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             Modifier
                 .fillMaxWidth()
                 .height(40.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(fill),
+                .bubbleGlassSurface(RoundedCornerShape(24.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 label,
-                color = if (selected) c.onSecondaryContainer else c.onSurface,
+                color = if (selected) GlassmorphicTheme.goldStart else Color.White,
                 fontWeight = FontWeight.Bold,
                 fontSize = 12.5.sp,
                 maxLines = 1,
@@ -312,8 +301,7 @@ private fun TrackRow(
             .fillMaxWidth()
             .padding(vertical = 3.dp)
             .pressable(pressedScale = 0.98f, onClick = onClick)
-            .clip(RoundedCornerShape(16.dp))
-            .background(if (selected) c.primary.copy(alpha = 0.14f) else c.surfaceContainerHigh.copy(alpha = 0.45f))
+            .bubbleGlassSurface(RoundedCornerShape(24.dp))
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -361,10 +349,10 @@ private fun PlayerGlassSheet(
 ) {
     val c = MaterialTheme.colorScheme
     BackHandler(onBack = onDismiss)
-    val shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
+    val shape = RoundedCornerShape(24.dp)
     val spec = glassSpec(
         shape = shape,
-        tint = glassFill(0.62f),
+        tint = Color(0xFF101116).copy(alpha = 0.6f),
         blur = 26.dp,
         refractionHeight = 18.dp,
         refractionAmount = 24.dp,
@@ -386,6 +374,7 @@ private fun PlayerGlassSheet(
                 .fillMaxWidth()
                 .heightIn(max = 620.dp)
                 .liquidGlass(backdrop, spec)
+                .metallicBorder(shape)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,

@@ -510,7 +510,7 @@ fun ShortsScreen(
 
     val glassTint = glassOverlayFill(0.5f)
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    Box(Modifier.fillMaxSize().appScreenBackground()) {
         if (feed.videos.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 if (feed.loading) {
@@ -684,8 +684,7 @@ fun ShortsScreen(
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
                                 .padding(top = 70.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(Color.Black.copy(alpha = 0.65f))
+                                .bubbleGlassSurface(RoundedCornerShape(24.dp))
                                 .padding(horizontal = 14.dp, vertical = 7.dp),
                             contentAlignment = Alignment.Center,
                         ) {
@@ -722,7 +721,8 @@ fun ShortsScreen(
                                 .align(Alignment.Center)
                                 .pressable(pressedScale = 0.9f) { exo.playWhenReady = true }
                                 .clip(CircleShape)
-                                .liquidGlass(backdrop, glass),
+                                .liquidGlass(backdrop, glass)
+                                .metallicBorder(CircleShape),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
@@ -960,8 +960,7 @@ fun ShortsScreen(
         ) {
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(Color.Black.copy(alpha = 0.62f))
+                    .bubbleGlassSurface(RoundedCornerShape(24.dp))
                     .padding(horizontal = 14.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -1068,7 +1067,8 @@ private fun ShortsCircleButton(
             .size(32.dp)
             .pressable(enabled = enabled, onClick = onClick)
             .clip(CircleShape)
-            .liquidGlass(backdrop, glass),
+            .liquidGlass(backdrop, glass)
+            .metallicBorder(CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         if (loading) {
@@ -1154,7 +1154,8 @@ private fun ShortsAction(
                 }
                 .pressable(onClick = onClick)
                 .clip(CircleShape)
-                .liquidGlass(backdrop, glass),
+                .liquidGlass(backdrop, glass)
+                .metallicBorder(CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))

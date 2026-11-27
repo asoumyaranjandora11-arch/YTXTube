@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.tensei.ytxtube
 
 import android.content.Intent
@@ -27,9 +29,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed as staggeredItemsIndexed
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -103,7 +109,6 @@ fun isMusicTrack(video: VideoItem): Boolean {
         t.contains("track") || ch.contains("vevo") || ch.contains("records") ||
         ch.contains("music") || ch.contains("topic") || video.durationSec in 60..720
 }
-
 @Stable
 class MusicFeedState(private val scope: CoroutineScope) {
     var shelves by mutableStateOf<List<MusicShelf>>(emptyList())
@@ -193,7 +198,7 @@ fun MusicScreen(
     val state = remember { MusicFeedState(scope) }
 
 
-    val listState = remember { androidx.compose.foundation.lazy.LazyListState() }
+    val listState = rememberLazyStaggeredGridState()
     var lastScrollSignal by remember { mutableIntStateOf(scrollToTop) }
     LaunchedEffect(scrollToTop) {
         if (scrollToTop != lastScrollSignal) {
@@ -361,113 +366,102 @@ fun MusicScreen(
                         }
                     }
                     else -> {
-                        LazyColumn(
+                        LazyVerticalStaggeredGrid(
+                            columns = StaggeredGridCells.Adaptive(180.dp),
                             state = listState,
                             contentPadding = contentPadding,
                             modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(24.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalItemSpacing = 12.dp,
                         ) {
 
                             if (state.recentPlays.isNotEmpty()) {
-                                item(key = "section_recent_plays") {
+                                item(key = "section_recent_plays", span = StaggeredGridItemSpan.FullLine) {
                                     MusicSectionHeader(
                                         title = "Listen Again",
                                         subtitle = if (signedIn) "Your recent YouTube Music listening history" else "Recently played",
                                         icon = Icons.Rounded.History,
                                     )
-                                    LazyRow(
-                                        contentPadding = PaddingValues(horizontal = 16.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(14.dp),
-                                        modifier = Modifier.padding(top = 10.dp),
-                                    ) {
-                                        itemsIndexed(state.recentPlays, key = { _, video -> "recent_" + video.id }) { index, video ->
-                                            MusicTrackSquareCard(
-                                                video = video,
-                                                onClick = { onOpenQueue(state.recentPlays, index) },
-                                                onOptions = { trackOptionsFor = video },
-                                            )
-                                        }
-                                    }
+                                }
+                                staggeredItemsIndexed(state.recentPlays, key = { _, video -> "recent_" + video.id }) { index, video ->
+                                    MusicTrackSquareCard(
+                                        video = video,
+                                        aspectRatio = bentoVideoAspectRatio(index),
+                                        modifier = Modifier.animateItem(),
+                                        onClick = { onOpenQueue(state.recentPlays, index) },
+                                        onOptions = { trackOptionsFor = video },
+                                    )
                                 }
                             }
 
 
                             if (state.likedTracks.isNotEmpty()) {
-                                item(key = "section_liked_music") {
+                                item(key = "section_liked_music", span = StaggeredGridItemSpan.FullLine) {
                                     MusicSectionHeader(
                                         title = "Liked Music",
                                         subtitle = "Your favorite saved tracks",
                                         icon = Icons.Rounded.Favorite,
                                     )
-                                    LazyRow(
-                                        contentPadding = PaddingValues(horizontal = 16.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(14.dp),
-                                        modifier = Modifier.padding(top = 10.dp),
-                                    ) {
-                                        itemsIndexed(state.likedTracks, key = { _, video -> "liked_" + video.id }) { index, video ->
-                                            MusicTrackSquareCard(
-                                                video = video,
-                                                onClick = { onOpenQueue(state.likedTracks, index) },
-                                                onOptions = { trackOptionsFor = video },
-                                            )
-                                        }
-                                    }
+                                }
+                                staggeredItemsIndexed(state.likedTracks, key = { _, video -> "liked_" + video.id }) { index, video ->
+                                    MusicTrackSquareCard(
+                                        video = video,
+                                        aspectRatio = bentoVideoAspectRatio(index + state.recentPlays.size),
+                                        modifier = Modifier.animateItem(),
+                                        onClick = { onOpenQueue(state.likedTracks, index) },
+                                        onOptions = { trackOptionsFor = video },
+                                    )
                                 }
                             }
 
-
-                            items(state.shelves, key = { "shelf_" + it.title }) { shelf ->
-                                val directTracks = remember(shelf) {
-                                    shelf.items
-                                        .filter { it.videoId != null && it.browseId.isNullOrEmpty() && it.playlistId.isNullOrEmpty() }
-                                        .mapNotNull { it.toVideoItem() }
-                                }
-                                Column(modifier = Modifier.fillMaxWidth()) {
+                            var shelfOffset = state.recentPlays.size + state.likedTracks.size
+                            state.shelves.forEachIndexed { shelfIndex, shelf ->
+                                item(key = "shelf_${shelfIndex}_${shelf.title}", span = StaggeredGridItemSpan.FullLine) {
                                     MusicSectionHeader(
                                         title = shelf.title,
                                         subtitle = shelf.subtitle ?: "Curated for you by YouTube Music",
                                         icon = Icons.Rounded.PlayArrow,
                                     )
-                                    LazyRow(
-                                        contentPadding = PaddingValues(horizontal = 16.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(14.dp),
-                                        modifier = Modifier.padding(top = 10.dp),
-                                    ) {
-                                        items(shelf.items, key = { "item_" + (it.videoId ?: it.browseId ?: it.title) }) { item ->
-                                            MusicShelfCard(
-                                                item = item,
-                                                onClick = {
-                                                    val direct = item.toVideoItem()
-                                                    val isTrack = direct != null &&
-                                                        item.browseId.isNullOrEmpty() &&
-                                                        item.playlistId.isNullOrEmpty()
-                                                    if (isTrack && direct != null) {
-
-
-                                                        val index = directTracks.indexOfFirst { it.id == direct.id }
-                                                        onOpenQueue(directTracks, if (index >= 0) index else 0)
-                                                    } else {
-
-                                                        loadMix(item)
-                                                    }
-                                                },
-                                                onOptions = {
-                                                    val direct = item.toVideoItem()
-                                                    if (direct != null && item.browseId.isNullOrEmpty() && item.playlistId.isNullOrEmpty()) {
-                                                        trackOptionsFor = direct
-                                                    } else {
-                                                        scope.launch {
-                                                            InnerTube.resolveMusicItem(item)?.let { trackOptionsFor = it }
-                                                        }
-                                                    }
-                                                },
-                                            )
-                                        }
-                                    }
                                 }
+                                val directTracks = shelf.items
+                                    .filter { it.videoId != null && it.browseId.isNullOrEmpty() && it.playlistId.isNullOrEmpty() }
+                                    .mapNotNull { it.toVideoItem() }
+                                staggeredItemsIndexed(
+                                    shelf.items,
+                                    key = { _, item -> "shelf_${shelfIndex}_" + (item.videoId ?: item.browseId ?: item.title) },
+                                ) { index, item ->
+                                    MusicShelfCard(
+                                        item = item,
+                                        aspectRatio = bentoVideoAspectRatio(shelfOffset + index),
+                                        modifier = Modifier.animateItem(),
+                                        onClick = {
+                                            val direct = item.toVideoItem()
+                                            val isTrack = direct != null &&
+                                                item.browseId.isNullOrEmpty() &&
+                                                item.playlistId.isNullOrEmpty()
+                                            if (isTrack && direct != null) {
+                                                val trackIndex = directTracks.indexOfFirst { it.id == direct.id }
+                                                onOpenQueue(directTracks, if (trackIndex >= 0) trackIndex else 0)
+                                            } else {
+                                                loadMix(item)
+                                            }
+                                        },
+                                        onOptions = {
+                                            val direct = item.toVideoItem()
+                                            if (direct != null && item.browseId.isNullOrEmpty() && item.playlistId.isNullOrEmpty()) {
+                                                trackOptionsFor = direct
+                                            } else {
+                                                scope.launch {
+                                                    InnerTube.resolveMusicItem(item)?.let { trackOptionsFor = it }
+                                                }
+                                            }
+                                        },
+                                    )
+                                }
+                                shelfOffset += shelf.items.size
                             }
 
-                            item(key = "bottom_space") {
+                            item(key = "bottom_space", span = StaggeredGridItemSpan.FullLine) {
                                 Spacer(Modifier.height(16.dp))
                             }
                         }
@@ -606,9 +600,8 @@ fun MusicTrackOptionsSheet(
     onDismiss: () -> Unit,
 ) {
     val c = MaterialTheme.colorScheme
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = c.surfaceContainerLow,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
         Column(
@@ -752,126 +745,170 @@ fun MusicTrackOptionsSheet(
 @Composable
 private fun MusicShelfCard(
     item: MusicShelfItem,
+    aspectRatio: Float,
+    modifier: Modifier,
     onClick: () -> Unit,
     onOptions: () -> Unit,
 ) {
-    val c = MaterialTheme.colorScheme
-    Column(
-        modifier = Modifier
-            .width(152.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .pressable(pressedScale = 0.96f) { onClick() },
-    ) {
-        Box(
-            modifier = Modifier
-                .size(152.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(c.surfaceContainerHighest),
-        ) {
-            AsyncImage(
-                model = highResMusicThumbnail(item.thumbnail),
-                contentDescription = item.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-
-            IconButton(
-                onClick = onOptions,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(5.dp)
-                    .size(30.dp),
-            ) {
-                Icon(
-                    Icons.Rounded.MoreVert,
-                    contentDescription = "Options",
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
-        }
-        Spacer(Modifier.height(7.dp))
-        Text(
-            item.title,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            fontWeight = FontWeight.Bold,
-            fontSize = 13.5.sp,
-            color = c.onSurface,
-        )
-        Text(
-            item.subtitle,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            fontWeight = FontWeight.Normal,
-            fontSize = 11.5.sp,
-            color = c.onSurfaceVariant.copy(alpha = 0.75f),
-        )
-    }
+    MusicArtworkCard(
+        title = item.title,
+        subtitle = item.subtitle,
+        thumbnail = highResMusicThumbnail(item.thumbnail),
+        aspectRatio = aspectRatio,
+        modifier = modifier,
+        onClick = onClick,
+        onOptions = onOptions,
+    )
 }
 
 @Composable
 private fun MusicTrackSquareCard(
     video: VideoItem,
+    aspectRatio: Float,
+    modifier: Modifier,
     onClick: () -> Unit,
     onOptions: () -> Unit,
+    onDownload: (() -> Unit)? = null,
 ) {
-    val c = MaterialTheme.colorScheme
+    MusicArtworkCard(
+        title = video.title,
+        subtitle = video.channel,
+        thumbnail = highResMusicThumbnail(video.thumbnail) ?: sharpenFeedThumbnail(null, video.id),
+        videoId = video.id,
+        aspectRatio = aspectRatio,
+        avatarVideo = video,
+        modifier = modifier,
+        onClick = onClick,
+        onOptions = onOptions,
+        onDownload = onDownload,
+        durationSec = video.durationSec,
+    )
+}
+
+@Composable
+private fun MusicArtworkCard(
+    title: String,
+    subtitle: String?,
+    thumbnail: String?,
+    aspectRatio: Float,
+    modifier: Modifier,
+    onClick: () -> Unit,
+    onOptions: () -> Unit,
+    videoId: String? = null,
+    avatarVideo: VideoItem? = null,
+    onDownload: (() -> Unit)? = null,
+    durationSec: Long? = null,
+) {
+    val compactLayout = aspectRatio <= 1f
     Column(
-        modifier = Modifier
-            .width(152.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .pressable(pressedScale = 0.96f) { onClick() }
-            .prefetchOnPress(video.id),
+        modifier = modifier
+            .fillMaxWidth()
+            .bubbleGlassSurface(RoundedCornerShape(24.dp))
+            .then(if (videoId != null) Modifier.prefetchOnPress(videoId) else Modifier)
+            .pressable(pressedScale = 0.97f, onClick = onClick),
     ) {
         Box(
-            modifier = Modifier
-                .size(152.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(c.surfaceContainerHighest),
+            modifier = Modifier.fillMaxWidth().aspectRatio(aspectRatio),
         ) {
             AsyncImage(
-                model = highResMusicThumbnail(video.thumbnail) ?: sharpenFeedThumbnail(null, video.id),
-                contentDescription = video.title,
+                model = thumbnail,
+                contentDescription = title,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
-
-            IconButton(
-                onClick = onOptions,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(5.dp)
-                    .size(30.dp),
-            ) {
-                Icon(
-                    Icons.Rounded.MoreVert,
-                    contentDescription = "Options",
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp),
+            if (compactLayout) {
+                Box(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(96.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                0f to Color.Transparent,
+                                0.35f to Color.Black.copy(alpha = 0.48f),
+                                1f to Color.Black.copy(alpha = 0.88f),
+                            ),
+                        ),
                 )
             }
+            durationSec?.takeIf { it > 0 }?.let {
+                DurationPill(it, Modifier.align(Alignment.TopStart).padding(8.dp), small = true)
+            }
+            Row(
+                modifier = Modifier.align(Alignment.TopEnd).padding(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                onDownload?.let { download ->
+                    IconButton(
+                        onClick = download,
+                        modifier = Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.42f)),
+                    ) {
+                        Icon(Icons.Rounded.Download, "Download audio", tint = Color.White, modifier = Modifier.size(18.dp))
+                    }
+                }
+                IconButton(
+                    onClick = onOptions,
+                    modifier = Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.42f)),
+                ) {
+                    Icon(Icons.Rounded.MoreVert, "Options", tint = Color.White, modifier = Modifier.size(18.dp))
+                }
+            }
+            if (compactLayout) {
+                Row(
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    avatarVideo?.let {
+                        ChannelAvatar(it.feedAvatar(), it.channel, size = 26)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(
+                        title,
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                        lineHeight = 16.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
         }
-        Spacer(Modifier.height(7.dp))
-        Text(
-            video.title,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            fontWeight = FontWeight.Bold,
-            fontSize = 13.5.sp,
-            color = c.onSurface,
-        )
-        Text(
-            video.channel,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            fontWeight = FontWeight.Normal,
-            fontSize = 11.5.sp,
-            color = c.onSurfaceVariant.copy(alpha = 0.75f),
-        )
+        if (!compactLayout) {
+            Row(
+                Modifier.fillMaxWidth().padding(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                avatarVideo?.let {
+                    ChannelAvatar(it.feedAvatar(), it.channel, size = 28)
+                    Spacer(Modifier.width(8.dp))
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        title,
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.5.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    subtitle?.takeIf { it.isNotBlank() }?.let {
+                        Text(
+                            it,
+                            color = Color.White.copy(alpha = 0.72f),
+                            fontSize = 11.5.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
-
 @Composable
 private fun DedicatedMusicSearchView(
     query: String,
@@ -888,6 +925,7 @@ private fun DedicatedMusicSearchView(
     val c = MaterialTheme.colorScheme
     val isDark = isDarkTheme()
     val isAmoled = ThemeSettings.mode == "amoled"
+    val videoMenu = LocalVideoMenu.current
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -898,7 +936,7 @@ private fun DedicatedMusicSearchView(
     Column(
         Modifier
             .fillMaxSize()
-            .background(if (isAmoled) Color.Black else c.surface)
+            .appScreenBackground()
             .statusBarsPadding(),
     ) {
 
@@ -920,19 +958,7 @@ private fun DedicatedMusicSearchView(
                 modifier = Modifier
                     .weight(1f)
                     .height(44.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(
-                        when {
-                            isAmoled -> Color(0xFF1A1A1A)
-                            isDark -> Color(0xFF222226)
-                            else -> Color(0xFFEFEFF4)
-                        },
-                    )
-                    .border(
-                        1.dp,
-                        if (isAmoled) Color(0xFF2E2E2E) else Color.Transparent,
-                        RoundedCornerShape(22.dp),
-                    )
+                    .bubbleGlassSurface(RoundedCornerShape(24.dp))
                     .padding(horizontal = 14.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
@@ -943,7 +969,7 @@ private fun DedicatedMusicSearchView(
                     Icon(
                         Icons.Rounded.Search,
                         contentDescription = null,
-                        tint = c.onSurfaceVariant.copy(alpha = 0.7f),
+                        tint = GlassmorphicTheme.goldStart,
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(Modifier.width(8.dp))
@@ -952,7 +978,7 @@ private fun DedicatedMusicSearchView(
                             Text(
                                 "Search songs, artists, albums...",
                                 fontSize = 14.sp,
-                                color = c.onSurfaceVariant.copy(alpha = 0.6f),
+                                color = Color.White.copy(alpha = 0.72f),
                             )
                         }
                         BasicTextField(
@@ -963,11 +989,11 @@ private fun DedicatedMusicSearchView(
                                 .focusRequester(focusRequester),
                             singleLine = true,
                             textStyle = TextStyle(
-                                color = c.onSurface,
+                                color = Color.White,
                                 fontSize = 14.5.sp,
                                 fontWeight = FontWeight.Medium,
                             ),
-                            cursorBrush = SolidColor(c.primary),
+                            cursorBrush = SolidColor(GlassmorphicTheme.goldStart),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                             keyboardActions = KeyboardActions(
                                 onSearch = {
@@ -985,7 +1011,7 @@ private fun DedicatedMusicSearchView(
                             Icon(
                                 Icons.Rounded.Close,
                                 contentDescription = "Clear",
-                                tint = c.onSurfaceVariant,
+                                tint = Color.White.copy(alpha = 0.76f),
                                 modifier = Modifier.size(16.dp),
                             )
                         }
@@ -1002,12 +1028,14 @@ private fun DedicatedMusicSearchView(
                 }
             }
             results.isNotEmpty() -> {
-                LazyColumn(
+                LazyVerticalStaggeredGrid(
+                    columns = StaggeredGridCells.Adaptive(180.dp),
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = contentPadding,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalItemSpacing = 12.dp,
                 ) {
-                    item {
+                    item(span = StaggeredGridItemSpan.FullLine) {
                         Text(
                             "Top Results",
                             fontFamily = RoundedHeavy,
@@ -1017,10 +1045,13 @@ private fun DedicatedMusicSearchView(
                             color = c.onSurfaceVariant,
                         )
                     }
-                    itemsIndexed(results, key = { _, video -> "sr_" + video.id }) { index, video ->
-                        MusicSearchResultRow(
+                    staggeredItemsIndexed(results, key = { _, video -> "sr_" + video.id }) { index, video ->
+                        MusicTrackSquareCard(
                             video = video,
+                            aspectRatio = bentoVideoAspectRatio(index),
+                            modifier = Modifier.animateItem(),
                             onClick = { onOpenTrack(video, index) },
+                            onOptions = { videoMenu(video) },
                             onDownload = { onDownloadTrack(video) },
                         )
                     }
@@ -1118,94 +1149,6 @@ private fun DedicatedMusicSearchView(
 }
 
 @Composable
-private fun MusicSearchResultRow(
-    video: VideoItem,
-    onClick: () -> Unit,
-    onDownload: () -> Unit,
-) {
-    val c = MaterialTheme.colorScheme
-    val menu = LocalVideoMenu.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(54.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(c.surfaceContainerHighest),
-        ) {
-            AsyncImage(
-                model = video.thumbnail ?: sharpenFeedThumbnail(null, video.id),
-                contentDescription = video.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                video.title,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = c.onSurface,
-            )
-            Spacer(Modifier.height(2.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    video.channel,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = c.onSurfaceVariant.copy(alpha = 0.8f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                if (video.durationSec > 0) {
-                    Text(
-                        " · ${formatDuration(video.durationSec * 1000)}",
-                        fontSize = 11.5.sp,
-                        color = c.onSurfaceVariant.copy(alpha = 0.6f),
-                    )
-                }
-            }
-        }
-        Spacer(Modifier.width(4.dp))
-        IconButton(
-            onClick = onDownload,
-            modifier = Modifier.size(36.dp),
-        ) {
-            Icon(
-                Icons.Rounded.Download,
-                contentDescription = "Download Audio",
-                tint = c.onSurfaceVariant.copy(alpha = 0.85f),
-                modifier = Modifier.size(19.dp),
-            )
-        }
-        IconButton(
-            onClick = { menu(video) },
-            modifier = Modifier.size(36.dp),
-        ) {
-            Icon(
-                Icons.Rounded.MoreVert,
-                contentDescription = "Options",
-                tint = c.onSurfaceVariant.copy(alpha = 0.7f),
-                modifier = Modifier.size(18.dp),
-            )
-        }
-    }
-}
-
-
-
-
-
-@Composable
 private fun MusicMixScreen(
     item: MusicShelfItem,
     songs: List<VideoItem>,
@@ -1222,7 +1165,7 @@ private fun MusicMixScreen(
     Box(
         Modifier
             .fillMaxSize()
-            .background(c.surface),
+            .appScreenBackground(),
     ) {
         Column(Modifier.fillMaxSize()) {
             BackScreenHeader(onBack = onBack) {
@@ -1314,107 +1257,28 @@ private fun MusicMixScreen(
                     title = "No songs here",
                     body = "This mix didn't return any playable songs.",
                 )
-                else -> LazyColumn(
+                else -> LazyVerticalStaggeredGrid(
+                    columns = StaggeredGridCells.Adaptive(180.dp),
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = contentPadding,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalItemSpacing = 12.dp,
                 ) {
-                    itemsIndexed(songs, key = { _, song -> "mix_" + song.id }) { index, song ->
-                        MusicMixSongRow(
-                            index = index,
-                            song = song,
+                    staggeredItemsIndexed(songs, key = { _, song -> "mix_" + song.id }) { index, song ->
+                        MusicTrackSquareCard(
+                            video = song,
+                            aspectRatio = bentoVideoAspectRatio(index),
+                            modifier = Modifier.animateItem(),
                             onClick = { onOpenSong(index) },
                             onDownload = { onDownloadSong(song) },
                             onOptions = { onOptions(song) },
                         )
                     }
-                    item(key = "mix_bottom") { Spacer(Modifier.height(24.dp)) }
+                    item(key = "mix_bottom", span = StaggeredGridItemSpan.FullLine) {
+                        Spacer(Modifier.height(24.dp))
+                    }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun MusicMixSongRow(
-    index: Int,
-    song: VideoItem,
-    onClick: () -> Unit,
-    onDownload: () -> Unit,
-    onOptions: () -> Unit,
-) {
-    val c = MaterialTheme.colorScheme
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 7.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            "${index + 1}",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = c.onSurfaceVariant.copy(alpha = 0.65f),
-            modifier = Modifier.width(26.dp),
-        )
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(c.surfaceContainerHighest),
-        ) {
-            AsyncImage(
-                model = highResMusicThumbnail(song.thumbnail) ?: sharpenFeedThumbnail(null, song.id),
-                contentDescription = song.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                song.title,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = c.onSurface,
-            )
-            Spacer(Modifier.height(2.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    song.channel,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = c.onSurfaceVariant.copy(alpha = 0.8f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                if (song.durationSec > 0) {
-                    Text(
-                        " · ${formatDuration(song.durationSec * 1000)}",
-                        fontSize = 11.5.sp,
-                        color = c.onSurfaceVariant.copy(alpha = 0.6f),
-                    )
-                }
-            }
-        }
-        IconButton(onClick = onDownload, modifier = Modifier.size(34.dp)) {
-            Icon(
-                Icons.Rounded.Download,
-                contentDescription = "Download audio",
-                tint = c.onSurfaceVariant.copy(alpha = 0.85f),
-                modifier = Modifier.size(18.dp),
-            )
-        }
-        IconButton(onClick = onOptions, modifier = Modifier.size(34.dp)) {
-            Icon(
-                Icons.Rounded.MoreVert,
-                contentDescription = "Options",
-                tint = c.onSurfaceVariant.copy(alpha = 0.7f),
-                modifier = Modifier.size(18.dp),
-            )
         }
     }
 }

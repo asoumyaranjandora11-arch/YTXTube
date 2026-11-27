@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.tensei.ytxtube
 
 import androidx.compose.foundation.background
@@ -26,7 +28,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 
-import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -187,7 +192,7 @@ private fun HomeSearchBar(onSearch: () -> Unit) {
             .padding(horizontal = 16.dp)
             .height(48.dp)
             .pressable(onClick = onSearch)
-            .glassmorphicSurface(CircleShape, GlassmorphicTheme.surface.copy(alpha = 0.58f))
+            .bubbleGlassSurface(RoundedCornerShape(24.dp))
             .padding(horizontal = 18.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -200,7 +205,7 @@ private fun HomeSearchBar(onSearch: () -> Unit) {
         )
         Text(
             I18n.t("search_hint", "Search YouTube"),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = Color.White.copy(alpha = 0.76f),
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium,
         )
@@ -284,7 +289,7 @@ fun HomeScreen(
                 filterScrollKey = activeFilter,
                 header = {
                     if (!signedIn) {
-                        item(key = "anon_banner", span = { GridItemSpan(maxLineSpan) }) {
+                        item(key = "anon_banner", span = StaggeredGridItemSpan.FullLine) {
                             
                             AnonHomeBanner(onSignIn = onSignIn, onSearch = onSearch)
                         }
@@ -632,6 +637,7 @@ fun LibraryScreen(
     scrollToTop: Int = 0,
 ) {
     val signedIn = Account.signedIn
+    val list = rememberStaggeredGridScrollToTop(scrollToTop)
     LaunchedEffect(signedIn) {
         if (signedIn) {
             lib.history.ensureLoaded()
@@ -649,9 +655,15 @@ fun LibraryScreen(
             onRefresh = { lib.history.refresh(); lib.loadPlaylists(); lib.loadChannels() },
             topPadding = top,
         ) {
-        LazyColumn(state = rememberScrollToTop(scrollToTop), contentPadding = contentPadding.withTop(top)) {
+        LazyVerticalStaggeredGrid(
+            columns = StaggeredGridCells.Adaptive(180.dp),
+            state = list,
+            contentPadding = contentPadding.withTop(top),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalItemSpacing = 12.dp,
+        ) {
             if (!signedIn) {
-                item {
+                item(span = StaggeredGridItemSpan.FullLine) {
                     EmptyState(
                         icon = Icons.Rounded.VideoLibrary,
                         title = "Your library",
@@ -659,88 +671,104 @@ fun LibraryScreen(
                         action = { PillButton("Sign in with Google", onSignIn) },
                     )
                 }
-                return@LazyColumn
-            }
-            item(key = "historyTitle") { SectionTitle(I18n.t("history", "History")) }
-            item(key = "history") {
-                val history = lib.history.videos
-                when {
-                    history.isNotEmpty() -> LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        items(history.take(20), key = { "h-" + it.id }) { video -> HistoryCard(video) { onOpen(video) } }
-                    }
-                    lib.history.loading -> Box(Modifier.fillMaxWidth().padding(24.dp), Alignment.Center) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, strokeWidth = 4.dp, modifier = Modifier.size(28.dp))
-                    }
-                    else -> Text(
-                        lib.history.error ?: "Nothing watched yet.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp,
-                        modifier = Modifier.padding(horizontal = 20.dp),
+            } else {
+                item(key = "historyTitle", span = StaggeredGridItemSpan.FullLine) {
+                    SectionTitle(I18n.t("history", "History"))
+                }
+                val history = lib.history.videos.take(20)
+                itemsIndexed(history, key = { _, video -> "h-${video.id}" }) { index, video ->
+                    VideoCard(
+                        video = video,
+                        onClick = { onOpen(video) },
+                        modifier = Modifier.animateItem(),
+                        thumbnailAspectRatio = bentoVideoAspectRatio(index),
                     )
                 }
-            }
-
-            if (lib.channels.isNotEmpty()) {
-                item(key = "subscriptionsTitle") {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        SectionTitle(I18n.t("subscriptions", "Subscriptions"), modifier = Modifier.padding(0.dp))
-                        Text(
-                            "All",
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable { onOpenAllSubscriptions() }
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                        )
+                if (history.isEmpty()) {
+                    item(key = "historyEmpty", span = StaggeredGridItemSpan.FullLine) {
+                        when {
+                            lib.history.loading -> Box(Modifier.fillMaxWidth().padding(24.dp), Alignment.Center) {
+                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, strokeWidth = 4.dp, modifier = Modifier.size(28.dp))
+                            }
+                            else -> Text(
+                                lib.history.error ?: "Nothing watched yet.",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 14.sp,
+                                modifier = Modifier.padding(horizontal = 20.dp),
+                            )
+                        }
                     }
                 }
-                item(key = "subscriptions") {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    ) {
-                        items(lib.channels, key = { "sub-" + it.id }) { ch ->
-                            Column(
+
+                if (lib.channels.isNotEmpty()) {
+                    item(key = "subscriptionsTitle", span = StaggeredGridItemSpan.FullLine) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            SectionTitle(I18n.t("subscriptions", "Subscriptions"), modifier = Modifier.padding(0.dp))
+                            Text(
+                                "All",
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp,
                                 modifier = Modifier
-                                    .width(68.dp)
-                                    .clickable { ch.url?.let(onOpenChannel) },
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                ChannelAvatar(ch.avatar, ch.name, size = 56)
-                                Spacer(Modifier.height(6.dp))
-                                Text(
-                                    ch.name,
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { onOpenAllSubscriptions() }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                            )
+                        }
+                    }
+                    item(key = "subscriptions", span = StaggeredGridItemSpan.FullLine) {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            items(lib.channels, key = { "sub-" + it.id }) { ch ->
+                                Column(
+                                    modifier = Modifier
+                                        .width(68.dp)
+                                        .clickable { ch.url?.let(onOpenChannel) },
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    ChannelAvatar(ch.avatar, ch.name, size = 56)
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(
+                                        ch.name,
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            item(key = "playlistsTitle") { SectionTitle("Playlists") }
-            val pinned = listOf(
-                PlaylistRef("WL", "Watch later", null, null),
-                PlaylistRef("MDL", "YTX Music Downloads", null, null),
-                PlaylistRef("LL", "Liked videos", null, null),
-            )
-            items((pinned + lib.playlists).chunked(2), key = { row -> row.joinToString { it.id } }) { row ->
-                Row(Modifier.padding(horizontal = 16.dp, vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    row.forEach { pl -> PlaylistTile(pl, Modifier.weight(1f)) { onOpenPlaylist(pl) } }
-                    if (row.size == 1) Spacer(Modifier.weight(1f))
+                item(key = "playlistsTitle", span = StaggeredGridItemSpan.FullLine) {
+                    SectionTitle("Playlists")
+                }
+                val pinned = listOf(
+                    PlaylistRef("WL", "Watch later", null, null),
+                    PlaylistRef("MDL", "YTX Music Downloads", null, null),
+                    PlaylistRef("LL", "Liked videos", null, null),
+                )
+                itemsIndexed(pinned + lib.playlists, key = { _, playlist -> "playlist-${playlist.id}" }) { index, playlist ->
+                    val tileHeight = when (index % 4) {
+                        0 -> 168.dp
+                        1 -> 138.dp
+                        2 -> 154.dp
+                        else -> 126.dp
+                    }
+                    PlaylistTile(
+                        playlist,
+                        Modifier.animateItem(),
+                        height = tileHeight,
+                    ) { onOpenPlaylist(playlist) }
                 }
             }
         }
@@ -749,31 +777,14 @@ fun LibraryScreen(
 }
 
 @Composable
-private fun HistoryCard(video: VideoItem, onClick: () -> Unit) {
-    val menu = LocalVideoMenu.current
-    val shape = RoundedCornerShape(16.dp)
-    Column(
-        Modifier.width(168.dp)
-            .then(
-                if (isDarkTheme() && ThemeSettings.mode != "amoled") Modifier.glassmorphicSurface(shape)
-                else Modifier.clip(shape).metallicBorder(shape)
-            )
-            .prefetchOnPress(video.id)
-            .pressable(pressedScale = 0.97f, onLongClick = { menu(video) }, onClick = onClick)
-    ) {
-        Box {
-            Thumbnail(video.thumbnail, Modifier.fillMaxWidth().aspectRatio(16f / 9f), radius = 16)
-            DurationPill(video.durationSec, Modifier.align(Alignment.BottomEnd).padding(6.dp), small = true)
-        }
-        Spacer(Modifier.height(7.dp))
-        Text(video.title, Modifier.padding(horizontal = 8.dp, vertical = 4.dp), fontSize = 13.sp, fontWeight = FontWeight.Bold, lineHeight = 16.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-    }
-}
-
-@Composable
-private fun PlaylistTile(playlist: PlaylistRef, modifier: Modifier, onClick: () -> Unit) {
+private fun PlaylistTile(
+    playlist: PlaylistRef,
+    modifier: Modifier,
+    height: androidx.compose.ui.unit.Dp,
+    onClick: () -> Unit,
+) {
     val c = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(26.dp)
+    val shape = RoundedCornerShape(24.dp)
     val (icon, tone) = when (playlist.id) {
         "WL" -> Icons.Rounded.WatchLater to c.primaryContainer
         "MDL" -> Icons.Rounded.MusicNote to c.tertiaryContainer
@@ -783,10 +794,9 @@ private fun PlaylistTile(playlist: PlaylistRef, modifier: Modifier, onClick: () 
     }
     Column(
         modifier = modifier
-            .height(132.dp)
+            .height(height)
+            .bubbleGlassSurface(shape)
             .pressable(pressedScale = 0.97f, onClick = onClick)
-            .clip(shape)
-            .background(c.surfaceContainerLow)
             .padding(14.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -798,8 +808,8 @@ private fun PlaylistTile(playlist: PlaylistRef, modifier: Modifier, onClick: () 
             }
         }
         Column {
-            Text(playlist.title, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            playlist.subtitle?.let { Text(it, color = c.onSurfaceVariant, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) }
+            Text(playlist.title, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            playlist.subtitle?.let { Text(it, color = Color.White.copy(alpha = 0.72f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) }
         }
     }
 }
@@ -981,18 +991,17 @@ fun SearchScreen(
                     modifier = Modifier
                         .weight(1f)
                         .height(48.dp)
-                        .clip(CircleShape)
-                        .background(c.surfaceContainerHigh)
+                        .bubbleGlassSurface(RoundedCornerShape(24.dp))
                         .padding(start = 16.dp, end = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(Icons.Rounded.Search, null, tint = c.onSurfaceVariant, modifier = Modifier.size(22.dp))
+                    Icon(Icons.Rounded.Search, null, tint = GlassmorphicTheme.goldStart, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(10.dp))
                     Box(Modifier.weight(1f)) {
                         if (state.query.isEmpty()) {
                             Text(
                                 "Search YouTube",
-                                color = c.onSurfaceVariant,
+                                color = Color.White.copy(alpha = 0.72f),
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold,
                             )
@@ -1001,8 +1010,8 @@ fun SearchScreen(
                             value = state.query,
                             onValueChange = state::updateQuery,
                             singleLine = true,
-                            textStyle = TextStyle(color = c.onSurface, fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
-                            cursorBrush = SolidColor(c.primary),
+                            textStyle = TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
+                            cursorBrush = SolidColor(GlassmorphicTheme.goldStart),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                             keyboardActions = KeyboardActions(onSearch = { submit() }, onDone = { submit() }),
                             modifier = Modifier
@@ -1023,7 +1032,7 @@ fun SearchScreen(
                                 showSearchKeyboard()
                             },
                             contentAlignment = Alignment.Center,
-                        ) { Icon(Icons.Rounded.Close, "Clear", tint = c.onSurfaceVariant, modifier = Modifier.size(20.dp)) }
+                        ) { Icon(Icons.Rounded.Close, "Clear", tint = Color.White.copy(alpha = 0.76f), modifier = Modifier.size(20.dp)) }
                     }
                 }
             }
@@ -1213,19 +1222,28 @@ fun SearchScreen(
                 body = "No videos matched “${state.submitted}”.",
             )
             else -> {
-                val list = rememberScrollToTop(scrollToTop)
+                val list = rememberStaggeredGridScrollToTop(scrollToTop)
                 LaunchedEffect(state.generation) { list.scrollToItem(0) }
-                LazyColumn(state = list, contentPadding = contentPadding.withTop(top)) {
-                items(state.results, key = { it.id }) { video ->
-                    CompactVideoCard(video, onClick = {
-                        val currentQuery = state.submitted.trim().ifEmpty { state.query.trim() }
-                        if (currentQuery.isNotEmpty()) {
-                            SearchHistory.add(currentQuery)
-                        }
-                        onOpen(video)
-                    })
+                LazyVerticalStaggeredGrid(
+                    columns = StaggeredGridCells.Adaptive(180.dp),
+                    state = list,
+                    contentPadding = contentPadding.withTop(top),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalItemSpacing = 12.dp,
+                ) {
+                    itemsIndexed(state.results, key = { _, video -> video.id }) { index, video ->
+                        VideoCard(
+                            video = video,
+                            onClick = {
+                                val currentQuery = state.submitted.trim().ifEmpty { state.query.trim() }
+                                if (currentQuery.isNotEmpty()) SearchHistory.add(currentQuery)
+                                onOpen(video)
+                            },
+                            modifier = Modifier.animateItem(),
+                            thumbnailAspectRatio = bentoVideoAspectRatio(index),
+                        )
+                    }
                 }
-            }
             }
         }
         }
